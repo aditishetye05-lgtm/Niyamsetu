@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Building2,
   MapPin,
@@ -61,6 +62,7 @@ const INVESTMENT_PRESETS = [
 const EMPLOYEE_PRESETS = [5, 15, 30, 75, 150];
 
 export function BusinessForm() {
+  const router = useRouter();
   const [enterpriseName, setEnterpriseName] = useState("");
   const [businessType, setBusinessType] = useState("Food Processing Unit");
   const [state, setState] = useState("Maharashtra");
@@ -121,6 +123,8 @@ export function BusinessForm() {
       localStorage.setItem("niyamsetu_business_profile", JSON.stringify(res));
 
       setCreatedProfile(res);
+      // Route user to the personalized approval roadmap
+      router.push(`/roadmap?business_id=${res.id}`);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -290,7 +294,7 @@ export function BusinessForm() {
             <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => alert(`Roadmap for Business ID: ${createdProfile.id} is being generated for Step 2 & 3!`)}
+                onClick={() => router.push(`/roadmap?business_id=${createdProfile.id}`)}
                 className="w-full sm:flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-orange-600/25 hover:from-amber-700 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all cursor-pointer"
               >
                 <span>Generate Compliance Roadmap</span>

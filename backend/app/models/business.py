@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Float, Integer, DateTime
+from sqlalchemy.orm import relationship
 from app.db.session import Base
 
 
@@ -19,6 +20,12 @@ class Business(Base):
     investment_inr = Column(Float, nullable=False)
     employee_count = Column(Integer, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    approvals = relationship(
+        "BusinessApproval",
+        back_populates="business",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self):
         return f"<Business(id={self.id}, enterprise_name={self.enterprise_name})>"

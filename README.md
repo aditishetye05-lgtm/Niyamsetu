@@ -21,21 +21,23 @@ NiyamSetu is an intelligent compliance and business approval navigation platform
 niyam-setu/
 ├── backend/
 │   ├── app/
-│   │   ├── api/v1/endpoints/  # Business profile endpoints
+│   │   ├── api/v1/endpoints/  # Business profile & Roadmap endpoints
 │   │   ├── core/              # Config & settings
-│   │   ├── db/                # Engine & session management
-│   │   ├── models/            # SQLAlchemy models (Business)
+│   │   ├── db/                # Engine, session & seed data
+│   │   ├── models/            # SQLAlchemy models (Business, MasterApproval, BusinessApproval)
 │   │   ├── schemas/           # Pydantic v2 schemas
-│   │   └── main.py            # FastAPI main app with CORS
-│   ├── supabase_schema.sql    # Supabase / PostgreSQL table DDL
-│   ├── test_api.py            # Automated API integration tests
+│   │   ├── services/          # Regulatory Discovery Engine
+│   │   └── main.py            # FastAPI main app with CORS & lifespan seeding
+│   ├── supabase_schema.sql    # Supabase / PostgreSQL table DDL & indexes
+│   ├── test_api.py            # Step 1 API tests
+│   ├── test_roadmap.py        # Step 2 Discovery & Roadmap tests
 │   ├── requirements.txt       # Python dependencies
 │   ├── run.py                 # Backend development runner
 │   └── .env                   # Backend environment configuration
 └── frontend/
     ├── src/
-    │   ├── app/               # Next.js App Router (Layout & Page)
-    │   ├── components/        # Business Registration Card, UI Primitives
+    │   ├── app/               # Next.js App Router (Step 1 Home & Step 2 /roadmap)
+    │   ├── components/        # Business Registration Card, Header, UI Primitives
     │   └── lib/               # Utility functions & API client
     ├── package.json
     └── tailwind.config.ts
@@ -64,19 +66,22 @@ niyam-setu/
    pip install -r requirements.txt
    ```
 4. Configure Database:
-   - For **local SQLite dev** (default): No configuration needed! It automatically creates `niyamsetu.db`.
-   - For **Supabase / PostgreSQL**: Edit `backend/.env` with:
+   - For **Supabase / PostgreSQL**: Edit `backend/.env` with your Supabase pooler URL:
      ```env
-     DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres
+     DATABASE_URL=postgresql://postgres.[REF]:[PASSWORD]@aws-0-ap-south-1.pooler.supabase.com:5432/postgres
      ```
-     You can also run `backend/supabase_schema.sql` directly inside the Supabase SQL editor.
-5. Run the server:
+   - For **local SQLite dev**: If no PostgreSQL URL is provided, it falls back to `niyamsetu.db`.
+5. Run automated tests:
+   ```bash
+   python test_roadmap.py
+   ```
+6. Run the server:
    ```bash
    python run.py
-   # Or using uvicorn directly:
+   # Or using uvicorn:
    uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
    ```
-6. API Documentation:
+7. API Documentation:
    - Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
    - ReDoc: [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
@@ -95,11 +100,31 @@ niyam-setu/
 
 ---
 
+## Feature Roadmap
+
+###  Step 1: Enter Business Details
+- Captures Enterprise Name, Business Type, State, Investment in INR, and Employee Count.
+- Automatically calculates MSME Classification (Micro, Small, Medium).
+- Persists record in Supabase PostgreSQL table `businesses`.
+
+###  Step 2: Approval Roadmap & Regulatory Discovery Engine
+- **Master Approvals Catalog**: Seeded with standard statutory Indian clearances (MCA, GST, Udyam MSME, FSSAI, Pollution Control CTE, Fire Safety NOC, Factory Licence, Shops & Establishment, Trade Licence).
+- **Rule Engine**: Analyzes parameters (Industry, Capital bracket, Staff threshold) and maps required clearances.
+- **Interactive Roadmap Page (`/roadmap?business_id=[id]`)**:
+  - Summary metrics banner (Total Clearances, Mandatory Count, Max Timeline, MSME bracket).
+  - Status management (`not_applied`, `documents_ready`, `submitted`, `under_review`, `approved`).
+  - Filtering by category (Mandatory, In Progress, Approved).
+  - Prerequisite tracking preparing for Step 3 (Dependency Graph).
+
+---
+
 ## API Endpoints Implemented
 
 | Method | Endpoint | Description |
 |---|---|---|
 | `POST` | `/api/v1/business/profile` | Register business profile and return record with UUID |
 | `GET` | `/api/v1/business/{business_id}` | Retrieve business profile by ID |
-| `GET` | `/api/v1/business/` | List registered businesses |
+| `POST` | `/api/v1/business/{business_id}/discover-approvals` | Evaluate criteria and generate customized approval checklist |
+| `GET` | `/api/v1/business/{business_id}/roadmap` | Retrieve mapped approvals with status, departments, and prerequisites |
+| `PATCH` | `/api/v1/business/{business_id}/approvals/{approval_id}/status` | Update progress status of a specific clearance |
 | `GET` | `/health` | Health check endpoint |
