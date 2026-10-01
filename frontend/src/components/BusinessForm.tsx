@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { createBusinessProfile, BusinessProfileResponse } from "@/lib/api";
 import { formatINR, formatIndianCurrencyWords } from "@/lib/utils";
+import { StepNavigation } from "@/components/StepNavigation";
 
 const BUSINESS_TYPES = [
   { id: "Food Processing Unit", label: "Food Processing Unit", desc: "FSSAI, Pollution Control (SPCB), Factory License" },
@@ -156,31 +157,7 @@ export function BusinessForm() {
   return (
     <div className="w-full max-w-3xl mx-auto">
       {/* Step Progress Tracker */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between text-xs sm:text-sm font-medium text-slate-500 mb-3 px-1">
-          <span className="flex items-center gap-1.5 font-semibold text-amber-700">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-600 text-white text-xs">
-              1
-            </span>
-            Enter Business Details
-          </span>
-          <span className="flex items-center gap-1.5 text-slate-400">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-slate-600 text-xs">
-              2
-            </span>
-            Regulatory Mapping
-          </span>
-          <span className="flex items-center gap-1.5 text-slate-400 hidden sm:flex">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-slate-600 text-xs">
-              3
-            </span>
-            Actionable Roadmap
-          </span>
-        </div>
-        <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-amber-500 to-orange-600 rounded-full w-1/3 transition-all duration-500"></div>
-        </div>
-      </div>
+      <StepNavigation currentStep={1} businessId={createdProfile?.id || null} />
 
       {/* Main Card Container */}
       <div className="rounded-2xl border border-slate-200/90 bg-white shadow-xl shadow-slate-200/50 overflow-hidden">

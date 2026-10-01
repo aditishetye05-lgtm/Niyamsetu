@@ -61,6 +61,15 @@ class BusinessApproval(Base):
         nullable=False,
     )  # Enum: 'not_applied', 'documents_ready', 'submitted', 'under_review', 'approved'
     is_mandatory = Column(Boolean, default=True, nullable=False)
+    application_id = Column(String(100), nullable=True)
+    tracking_stage = Column(
+        String(50),
+        default="submitted",
+        nullable=False,
+    )  # 'submitted', 'documents_verified', 'department_inspection', 'final_review', 'approved'
+    application_date = Column(DateTime, nullable=True)
+    approval_expiry_date = Column(DateTime, nullable=True)
+    notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     business = relationship("Business", back_populates="approvals")

@@ -4,6 +4,7 @@ import React, { useEffect, useState, Suspense, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { StepNavigation } from "@/components/StepNavigation";
 import { ComplianceScoreWidget } from "@/components/ComplianceScoreWidget";
 import {
   BusinessDocumentsResponse,
@@ -239,49 +240,7 @@ function VaultInner() {
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Stepper Progress Bar */}
-      <div>
-        <div className="flex items-center justify-between text-xs sm:text-sm font-medium text-slate-500 mb-3 px-1">
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 font-medium text-emerald-700 hover:text-emerald-800 transition-colors"
-          >
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white text-xs">
-              ✓
-            </span>
-            <span>1. Business Details</span>
-          </Link>
-
-          <Link
-            href={`/roadmap?business_id=${businessId}`}
-            className="flex items-center gap-1.5 font-medium text-emerald-700 hover:text-emerald-800 transition-colors"
-          >
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white text-xs">
-              ✓
-            </span>
-            <span>2. Approval Roadmap</span>
-          </Link>
-
-          <span className="flex items-center gap-1.5 font-bold text-amber-700">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-600 text-white text-xs">
-              3
-            </span>
-            <span>3. Smart Document Vault</span>
-          </span>
-
-          <Link
-            href={`/dependencies?business_id=${businessId}`}
-            className="flex items-center gap-1.5 text-slate-500 hover:text-slate-800 transition-colors hidden sm:flex"
-          >
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-slate-600 text-xs">
-              4
-            </span>
-            <span>4. Dependency Map</span>
-          </Link>
-        </div>
-        <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-amber-500 via-orange-500 to-indigo-600 rounded-full w-3/4 transition-all duration-500"></div>
-        </div>
-      </div>
+      <StepNavigation currentStep={3} businessId={businessId} />
 
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

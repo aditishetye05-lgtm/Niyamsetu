@@ -276,6 +276,63 @@ def seed_regulatory_documents(db: Session) -> int:
     return doc_added + mapping_added
 
 
+from datetime import datetime, timedelta
+from app.models.alert import AlertAndReminder
+
+
+def seed_business_alerts(business_id: str, db: Session):
+    """
+    Idempotently seeds default compliance alerts and reminders for an enterprise.
+    """
+    existing = (
+        db.query(AlertAndReminder)
+        .filter(AlertAndReminder.business_id == business_id)
+        .first()
+    )
+    if existing:
+        return
+
+    # Find master approvals for reference
+    fire_app = db.query(MasterApproval).filter(MasterApproval.code == "FIRE_NOC").first()
+    fssai_app = db.query(MasterApproval).filter(MasterApproval.code == "FSSAI_LICENCE").first()
+    pcb_app = db.query(MasterApproval).filter(MasterApproval.code == "PCB_CTE").first()
+
+    default_alerts = [
+        {
+            "business_id": business_id,
+            "approval_id": fire_app.id if fire_app else None,
+            "alert_type": "renewal_due",
+            "title": "Fire NOC renewal due in 30 days",
+            "message": "Annual audit and fire safety certification renewal is due soon. Ensure fire hydrant logbooks are signed.",
+            "due_date": datetime.utcnow() + timedelta(days=30),
+            "is_read": False,
+        },
+        {
+            "business_id": business_id,
+            "approval_id": fssai_app.id if fssai_app else None,
+            "alert_type": "pending_action",
+            "title": "Action Required: Upload Water Test Report for FSSAI",
+            "message": "FSSAI license application requires an accredited NABL water quality test report before scrutiny.",
+            "due_date": datetime.utcnow() + timedelta(days=7),
+            "is_read": False,
+        },
+        {
+            "business_id": business_id,
+            "approval_id": pcb_app.id if pcb_app else None,
+            "alert_type": "status_update",
+            "title": "Pollution Consent (CTE) application status updated",
+            "message": "State Pollution Control Board has moved your application to Department Technical Scrutiny stage.",
+            "due_date": None,
+            "is_read": False,
+        },
+    ]
+
+    for a_data in default_alerts:
+        db.add(AlertAndReminder(**a_data))
+    db.commit()
+
+
 def seed_all(db: Session):
     seed_master_approvals(db)
     seed_regulatory_documents(db)
+

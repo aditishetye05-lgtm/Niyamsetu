@@ -390,3 +390,193 @@ export async function getDependencyMap(
   return response.json();
 }
 
+// ==========================================
+// Feature 5: Tracker, Portal Handoff & Alerts
+// ==========================================
+
+export type TrackingStage =
+  | "submitted"
+  | "documents_verified"
+  | "department_inspection"
+  | "final_review"
+  | "approved";
+
+export interface TrackApprovalRequest {
+  application_id: string;
+  tracking_stage?: TrackingStage;
+  application_date?: string | null;
+  approval_expiry_date?: string | null;
+  notes?: string | null;
+}
+
+export interface TrackedApprovalItem {
+  id: string;
+  business_id: string;
+  approval_id: string;
+  code: string;
+  name: string;
+  department: string;
+  status: string;
+  application_id: string | null;
+  tracking_stage: TrackingStage;
+  application_date: string | null;
+  approval_expiry_date: string | null;
+  notes: string | null;
+  official_portal_url: string | null;
+}
+
+export interface TrackingOverviewResponse {
+  business_id: string;
+  enterprise_name: string;
+  total_tracked: number;
+  stage_counts: Record<string, number>;
+  approvals: TrackedApprovalItem[];
+}
+
+export interface AlertItem {
+  id: string;
+  business_id: string;
+  approval_id: string | null;
+  alert_type: "renewal_due" | "pending_action" | "status_update";
+  title: string;
+  message: string;
+  due_date: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface AlertsSummary {
+  business_id: string;
+  total_alerts: number;
+  total_unread: number;
+  renewal_due_count: number;
+  pending_action_count: number;
+  status_update_count: number;
+  alerts: AlertItem[];
+}
+
+export interface PortalCheckResponse {
+  business_id: string;
+  approval_id: string;
+  approval_code: string;
+  approval_name: string;
+  official_portal_url: string;
+  is_ready_to_proceed: boolean;
+  check_eligibility: boolean;
+  check_documents: boolean;
+  check_prerequisites: boolean;
+  missing_requirements: string[];
+  statutory_disclaimer: string;
+}
+
+export async function updateApprovalTracking(
+  businessId: string,
+  approvalId: string,
+  data: TrackApprovalRequest
+): Promise<TrackedApprovalItem> {
+  const response = await fetch(
+    `${API_BASE_URL}/business/${businessId}/approvals/${approvalId}/track`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(data),
+    }
+  );
+
+  if (!response.ok) {
+    let errorMsg = `Failed to update tracking (${response.status})`;
+    try {
+      const err = await response.json();
+      if (err.detail) errorMsg = err.detail;
+    } catch {}
+    throw new Error(errorMsg);
+  }
+
+  return response.json();
+}
+
+export async function getTrackingOverview(
+  businessId: string
+): Promise<TrackingOverviewResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/business/${businessId}/tracking`,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch tracking overview (${response.status})`);
+  }
+
+  return response.json();
+}
+
+export async function getBusinessAlerts(
+  businessId: string
+): Promise<AlertsSummary> {
+  const response = await fetch(
+    `${API_BASE_URL}/business/${businessId}/alerts`,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch business alerts (${response.status})`);
+  }
+
+  return response.json();
+}
+
+export async function markAlertAsRead(
+  businessId: string,
+  alertId: string
+): Promise<AlertItem> {
+  const response = await fetch(
+    `${API_BASE_URL}/business/${businessId}/alerts/${alertId}/read`,
+    {
+      method: "PATCH",
+      headers: {
+        Accept: "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to mark alert as read (${response.status})`);
+  }
+
+  return response.json();
+}
+
+export async function checkPortalReadiness(
+  businessId: string,
+  approvalId: string
+): Promise<PortalCheckResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/business/${businessId}/portal-check/${approvalId}`,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to check portal readiness (${response.status})`);
+  }
+
+  return response.json();
+}
+

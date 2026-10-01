@@ -40,12 +40,35 @@ CREATE TABLE IF NOT EXISTS public.business_approvals (
     approval_id VARCHAR(36) NOT NULL REFERENCES public.master_approvals(id) ON DELETE CASCADE,
     status VARCHAR(50) NOT NULL DEFAULT 'not_applied',
     is_mandatory BOOLEAN NOT NULL DEFAULT TRUE,
+    application_id VARCHAR(100),
+    tracking_stage VARCHAR(50) NOT NULL DEFAULT 'submitted',
+    application_date TIMESTAMP WITH TIME ZONE,
+    approval_expiry_date TIMESTAMP WITH TIME ZONE,
+    notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_business_approvals_business_id ON public.business_approvals(business_id);
 CREATE INDEX IF NOT EXISTS idx_business_approvals_approval_id ON public.business_approvals(approval_id);
 CREATE INDEX IF NOT EXISTS idx_business_approvals_status ON public.business_approvals(status);
+CREATE INDEX IF NOT EXISTS idx_business_approvals_application_id ON public.business_approvals(application_id);
+
+-- 7. Create alerts_and_reminders table
+CREATE TABLE IF NOT EXISTS public.alerts_and_reminders (
+    id VARCHAR(36) PRIMARY KEY,
+    business_id VARCHAR(36) NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
+    approval_id VARCHAR(36) REFERENCES public.master_approvals(id) ON DELETE SET NULL,
+    alert_type VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    due_date TIMESTAMP WITH TIME ZONE,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_alerts_business_id ON public.alerts_and_reminders(business_id);
+CREATE INDEX IF NOT EXISTS idx_alerts_alert_type ON public.alerts_and_reminders(alert_type);
+CREATE INDEX IF NOT EXISTS idx_alerts_is_read ON public.alerts_and_reminders(is_read);
 
 -- 4. Create master_documents table
 CREATE TABLE IF NOT EXISTS public.master_documents (

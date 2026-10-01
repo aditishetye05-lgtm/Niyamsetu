@@ -133,7 +133,7 @@ niyam-setu/
   - Clearance filter tabs with live completion fractions.
   - Interactive upload dropzone supporting real files or verified mocks.
 
-###  Step 4: Approval Dependency Map (Directed Acyclic Graph)
+### 🚀 Step 4: Approval Dependency Map (Directed Acyclic Graph)
 - **Dependency Resolution Engine**:
   - Distinguishes **Independent** clearances (can be filed immediately: Business Registration, Fire Safety NOC) from **Dependent** clearances (e.g. FSSAI requires Business Reg; Factory Licence requires Pollution Consent & Fire NOC).
   - Evaluates real-time node execution states:
@@ -145,6 +145,24 @@ niyam-setu/
   - Built with `@xyflow/react` and `dagre` for automated hierarchical left-to-right tree layout.
   - Custom Card Nodes with document readiness percentage, status badges, and glowing pulse effects for ready nodes.
   - Side Drawer on node click displaying prerequisites, status breakdown, and direct links to official government portals.
+
+### 🌐 Steps 5, 6 & 7: Portal Handoff, Status Tracker & Smart Notifications (`/tracker?business_id=[id]`)
+- **Step 5: Proceed to Official Portal (Statutory Handoff Gate)**:
+  - 3-Point Pre-flight Readiness Check:
+    - `[✓] Eligibility Criteria Satisfied`
+    - `[✓] Mandatory Vault Documents Uploaded` (with percentage gauge)
+    - `[✓] Prerequisite Clearances Cleared`
+  - Clear Statutory Disclaimer & external portal redirect button.
+- **Step 6: Official Application Status Tracker**:
+  - Form to record and update official government application numbers (e.g., `MH2026-FSSAI-8921`).
+  - Interactive 5-Stage Stepper:
+    `[1. Submitted] -> [2. Documents] -> [3. Verification] -> [4. Review] -> [5. Approval]`
+  - Real-time status update, inspector notes, and stage breakdown.
+- **Step 7: Reminders & Notifications Center**:
+  - Quick summary cards for Upcoming Renewals, Pending Actions, and Status Updates.
+  - Urgent alert banner highlighting imminent renewals with countdowns.
+  - Global top navbar notification bell with unread badge counter and interactive dropdown drawer.
+  - Filter by alert category and mark-as-read capability.
 
 ---
 
@@ -162,4 +180,10 @@ niyam-setu/
 | `DELETE` | `/api/v1/business/{business_id}/documents/{vault_doc_id}` | Remove document from vault |
 | `GET` | `/api/v1/business/{business_id}/compliance-score` | Calculate real-time Compliance Readiness Score (0-100%) & breakdown |
 | `GET` | `/api/v1/business/{business_id}/dependency-map` | Compute interactive Directed Acyclic Graph (DAG) with real-time clearance eligibility |
+| `POST` | `/api/v1/business/{business_id}/approvals/{approval_id}/track` | Save government `application_id` and update 5-stage tracking progress |
+| `GET` | `/api/v1/business/{business_id}/tracking` | Retrieve all tracked clearances with 5-stage progression status |
+| `GET` | `/api/v1/business/{business_id}/alerts` | Retrieve notifications grouped into Renewals, Pending Actions, and Updates |
+| `PATCH` | `/api/v1/business/{business_id}/alerts/{alert_id}/read` | Mark a statutory alert as read |
+| `GET` | `/api/v1/business/{business_id}/portal-check/{approval_id}` | Pre-flight validation gate before statutory redirect |
 | `GET` | `/health` | Health check endpoint |
+

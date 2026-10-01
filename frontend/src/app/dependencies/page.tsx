@@ -18,6 +18,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import dagre from "dagre";
 import { Header } from "@/components/Header";
+import { StepNavigation } from "@/components/StepNavigation";
 import { DAGCustomNode } from "@/components/DAGCustomNode";
 import {
   DAGResponse,
@@ -215,49 +216,7 @@ function DependenciesInner() {
     <div className="flex flex-col min-h-screen bg-slate-50">
       <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1 flex flex-col">
         {/* Stepper Progress Bar */}
-        <div>
-          <div className="flex items-center justify-between text-xs sm:text-sm font-medium text-slate-500 mb-3 px-1">
-            <Link
-              href="/"
-              className="flex items-center gap-1.5 font-medium text-emerald-700 hover:text-emerald-800 transition-colors"
-            >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white text-xs">
-                ✓
-              </span>
-              <span>1. Business Details</span>
-            </Link>
-
-            <Link
-              href={`/roadmap?business_id=${businessId}`}
-              className="flex items-center gap-1.5 font-medium text-emerald-700 hover:text-emerald-800 transition-colors"
-            >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white text-xs">
-                ✓
-              </span>
-              <span>2. Approval Roadmap</span>
-            </Link>
-
-            <Link
-              href={`/vault?business_id=${businessId}`}
-              className="flex items-center gap-1.5 font-medium text-emerald-700 hover:text-emerald-800 transition-colors"
-            >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white text-xs">
-                ✓
-              </span>
-              <span>3. Document Vault</span>
-            </Link>
-
-            <span className="flex items-center gap-1.5 font-bold text-indigo-700">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-white text-xs">
-                4
-              </span>
-              <span>4. Dependency Map</span>
-            </span>
-          </div>
-          <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-amber-500 via-orange-500 to-indigo-600 rounded-full w-full transition-all duration-500"></div>
-          </div>
-        </div>
+        <StepNavigation currentStep={4} businessId={businessId} />
 
         {/* Top Header & Metrics Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -547,17 +506,17 @@ function DependenciesInner() {
         {/* Bottom Navigation */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
           <Link
-            href={`/roadmap?business_id=${businessId}`}
+            href={`/vault?business_id=${businessId}`}
             className="text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors inline-flex items-center gap-1"
           >
-            <span>← Back to Approval Roadmap (Step 2)</span>
+            <span>← Back to Document Vault (Step 3)</span>
           </Link>
 
           <Link
-            href={`/vault?business_id=${businessId}`}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 via-orange-500 to-amber-600 px-6 py-3 text-sm font-semibold text-white shadow-md hover:from-amber-700 hover:to-orange-700 transition-all cursor-pointer"
+            href={`/tracker?business_id=${businessId}`}
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 via-orange-500 to-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-md hover:from-amber-700 hover:to-indigo-700 transition-all cursor-pointer"
           >
-            <span>Open Document Vault (Step 3)</span>
+            <span>Proceed to Steps 5-7: Tracker & Alerts</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
