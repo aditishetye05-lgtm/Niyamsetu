@@ -329,3 +329,64 @@ export async function getComplianceScore(
 
   return response.json();
 }
+
+export interface DAGNode {
+  id: string;
+  code: string;
+  label: string;
+  department: string;
+  description: string;
+  status: string;
+  execution_state: "CAN_APPLY_NOW" | "IN_PROGRESS" | "COMPLETED" | "BLOCKED";
+  can_apply: boolean;
+  blocking_reasons: string[];
+  prerequisites: string[];
+  documents_ready_percentage: number;
+  portal_url?: string | null;
+  processing_days: number;
+}
+
+export interface DAGEdge {
+  id: string;
+  source: string;
+  target: string;
+  is_satisfied: boolean;
+  label?: string | null;
+}
+
+export interface DAGSummary {
+  total_clearances: number;
+  ready_to_apply_count: number;
+  blocked_count: number;
+  in_progress_count: number;
+  completed_count: number;
+}
+
+export interface DAGResponse {
+  business_id: string;
+  enterprise_name: string;
+  summary: DAGSummary;
+  nodes: DAGNode[];
+  edges: DAGEdge[];
+}
+
+export async function getDependencyMap(
+  businessId: string
+): Promise<DAGResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/business/${businessId}/dependency-map`,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch dependency map (${response.status})`);
+  }
+
+  return response.json();
+}
+
