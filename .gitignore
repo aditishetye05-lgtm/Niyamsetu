@@ -30,6 +30,9 @@ venv.bak/
 
 # FastAPI / Uvicorn
 *.log
+*.sqlite
+*.sqlite3
+*.db
 
 # Environment variables
 .env
