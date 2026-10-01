@@ -50,6 +50,69 @@ export interface RoadmapResponse {
   approvals: BusinessApprovalItem[];
 }
 
+export interface VaultDocumentItem {
+  id: string;
+  business_id: string;
+  master_document_id: string;
+  file_name: string;
+  file_url: string;
+  mime_type?: string | null;
+  file_size_kb: number;
+  verification_status: string;
+  uploaded_at: string;
+}
+
+export interface ApprovalDocumentItem {
+  master_document_id: string;
+  code: string;
+  name: string;
+  description: string;
+  valid_formats: string;
+  max_size_mb: number;
+  is_mandatory: boolean;
+  is_uploaded: boolean;
+  vault_document?: VaultDocumentItem | null;
+  reused_in_approvals: string[];
+}
+
+export interface ApprovalDocumentGroup {
+  approval_id: string;
+  approval_code: string;
+  approval_name: string;
+  department: string;
+  total_documents: number;
+  uploaded_documents: number;
+  completion_percentage: number;
+  documents: ApprovalDocumentItem[];
+}
+
+export interface BusinessDocumentsResponse {
+  business_id: string;
+  enterprise_name: string;
+  total_required_unique: number;
+  total_uploaded_unique: number;
+  document_readiness_pct: number;
+  approvals: ApprovalDocumentGroup[];
+  unique_vault_checklist: ApprovalDocumentItem[];
+}
+
+export interface ComplianceScoreBreakdown {
+  documents_readiness: number;
+  approvals_progress: number;
+  dependencies_score: number;
+  renewals_validity_score: number;
+}
+
+export interface ComplianceScoreResponse {
+  business_id: string;
+  enterprise_name: string;
+  overall_score: number;
+  rating_label: string;
+  breakdown: ComplianceScoreBreakdown;
+  weights: Record<string, number>;
+  summary_message: string;
+}
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -163,6 +226,105 @@ export async function updateApprovalStatus(
 
   if (!response.ok) {
     throw new Error(`Failed to update status (${response.status})`);
+  }
+
+  return response.json();
+}
+
+export async function getBusinessDocuments(
+  businessId: string
+): Promise<BusinessDocumentsResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/business/${businessId}/documents`,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch business documents (${response.status})`);
+  }
+
+  return response.json();
+}
+
+export async function uploadVaultDocument(
+  businessId: string,
+  masterDocumentId: string,
+  file?: File,
+  fileName?: string
+): Promise<VaultDocumentItem> {
+  const formData = new FormData();
+  formData.append("master_document_id", masterDocumentId);
+
+  if (file) {
+    formData.append("file", file);
+  }
+  if (fileName) {
+    formData.append("file_name", fileName);
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}/business/${businessId}/documents/upload`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    let errText = "Failed to upload document";
+    try {
+      const err = await response.json();
+      if (err.detail) errText = err.detail;
+    } catch {
+      // ignore
+    }
+    throw new Error(errText);
+  }
+
+  return response.json();
+}
+
+export async function deleteVaultDocument(
+  businessId: string,
+  vaultDocumentId: string
+): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(
+    `${API_BASE_URL}/business/${businessId}/documents/${vaultDocumentId}`,
+    {
+      method: "DELETE",
+      headers: {
+        Accept: "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to delete document (${response.status})`);
+  }
+
+  return response.json();
+}
+
+export async function getComplianceScore(
+  businessId: string
+): Promise<ComplianceScoreResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/business/${businessId}/compliance-score`,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch compliance score (${response.status})`);
   }
 
   return response.json();

@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.approval import MasterApproval
+from app.models.document import MasterDocument, ApprovalRequiredDocument
 
 MASTER_APPROVALS_DATA = [
     {
@@ -94,12 +95,109 @@ MASTER_APPROVALS_DATA = [
     },
 ]
 
+MASTER_DOCUMENTS_DATA = [
+    {
+        "code": "DOC_PAN",
+        "name": "Permanent Account Number (PAN) Card",
+        "description": "Entity PAN card or individual promoter PAN issued by the Income Tax Department.",
+        "valid_formats": "pdf,jpg,png",
+        "max_size_mb": 5,
+    },
+    {
+        "code": "DOC_AADHAAR",
+        "name": "Aadhaar / Identity Proof of Key Persons",
+        "description": "Government issued photo identification for authorized signatories, directors, or proprietors.",
+        "valid_formats": "pdf,jpg,png",
+        "max_size_mb": 5,
+    },
+    {
+        "code": "DOC_INCORPORATION_CERT",
+        "name": "Certificate of Incorporation / Partnership Deed",
+        "description": "Official company incorporation certificate, LLP agreement, or registered partnership deed.",
+        "valid_formats": "pdf",
+        "max_size_mb": 10,
+    },
+    {
+        "code": "DOC_RENT_AGREEMENT",
+        "name": "Premises Proof / Registered Rent Agreement",
+        "description": "Registered lease/rental agreement or ownership deed along with recent electricity bill/utility receipt.",
+        "valid_formats": "pdf",
+        "max_size_mb": 10,
+    },
+    {
+        "code": "DOC_SITE_PLAN",
+        "name": "Architectural Layout / Site Plan",
+        "description": "Certified scale floor plan showing machinery layout, safety exits, ventilation, and dimensions.",
+        "valid_formats": "pdf,jpg,png",
+        "max_size_mb": 15,
+    },
+    {
+        "code": "DOC_FSMS_PLAN",
+        "name": "Food Safety Management System (FSMS) Plan",
+        "description": "Documented Hazard Analysis Critical Control Point (HACCP) plan and hygiene protocol.",
+        "valid_formats": "pdf",
+        "max_size_mb": 10,
+    },
+    {
+        "code": "DOC_WATER_TEST",
+        "name": "Potable Water Quality Test Report",
+        "description": "NABL accredited laboratory chemical & microbiological water analysis report conforming to IS:10500.",
+        "valid_formats": "pdf",
+        "max_size_mb": 5,
+    },
+    {
+        "code": "DOC_FIRE_SAFETY_PLAN",
+        "name": "Fire Safety Equipment & Evacuation Plan",
+        "description": "Comprehensive schematic of smoke detectors, hydrants, extinguishers, and emergency evacuation drills.",
+        "valid_formats": "pdf",
+        "max_size_mb": 10,
+    },
+    {
+        "code": "DOC_ELECTRIC_SAFETY",
+        "name": "Electrical Safety & Load Sanction Letter",
+        "description": "DISCOM power sanction order and Electrical Inspectorate safety clearance certificate.",
+        "valid_formats": "pdf",
+        "max_size_mb": 5,
+    },
+    {
+        "code": "DOC_PROCESS_FLOW",
+        "name": "Industrial Manufacturing Process Flowchart",
+        "description": "Detailed sequential manufacturing flowchart specifying inputs, chemical reactions, and emissions.",
+        "valid_formats": "pdf",
+        "max_size_mb": 5,
+    },
+    {
+        "code": "DOC_EFFLUENT_PLAN",
+        "name": "Effluent Treatment Scheme (ETP/STP)",
+        "description": "Engineering scheme for treatment and disposal of industrial trade effluents and hazardous waste.",
+        "valid_formats": "pdf",
+        "max_size_mb": 10,
+    },
+    {
+        "code": "DOC_MACHINERY_LIST",
+        "name": "Installed Machinery & Power Rating Schedule",
+        "description": "Comprehensive asset register of manufacturing equipment with connected motor kilowatt/horsepower ratings.",
+        "valid_formats": "pdf,xlsx",
+        "max_size_mb": 5,
+    },
+]
+
+# Mapping of approval codes to required document codes
+APPROVAL_DOC_MAPPINGS = {
+    "BIZ_REG": ["DOC_INCORPORATION_CERT", "DOC_PAN", "DOC_AADHAAR", "DOC_RENT_AGREEMENT"],
+    "GST_REG": ["DOC_PAN", "DOC_AADHAAR", "DOC_RENT_AGREEMENT"],
+    "MSME_UDYAM": ["DOC_PAN", "DOC_AADHAAR"],
+    "TRADE_LICENCE": ["DOC_RENT_AGREEMENT", "DOC_PAN", "DOC_SITE_PLAN"],
+    "FIRE_NOC": ["DOC_SITE_PLAN", "DOC_FIRE_SAFETY_PLAN", "DOC_ELECTRIC_SAFETY", "DOC_RENT_AGREEMENT"],
+    "PCB_CTE": ["DOC_PROCESS_FLOW", "DOC_EFFLUENT_PLAN", "DOC_SITE_PLAN", "DOC_RENT_AGREEMENT"],
+    "FACTORY_LICENCE": ["DOC_SITE_PLAN", "DOC_MACHINERY_LIST", "DOC_ELECTRIC_SAFETY", "DOC_FIRE_SAFETY_PLAN"],
+    "FSSAI_LICENCE": ["DOC_SITE_PLAN", "DOC_FSMS_PLAN", "DOC_WATER_TEST", "DOC_RENT_AGREEMENT", "DOC_PAN"],
+    "SHOPS_EST": ["DOC_RENT_AGREEMENT", "DOC_PAN", "DOC_AADHAAR"],
+    "BOILER_REG": ["DOC_SITE_PLAN", "DOC_MACHINERY_LIST"],
+}
+
 
 def seed_master_approvals(db: Session) -> int:
-    """
-    Idempotently seeds master regulatory approvals if not already present.
-    Returns count of newly seeded approvals.
-    """
     added_count = 0
     for data in MASTER_APPROVALS_DATA:
         existing = (
@@ -110,13 +208,74 @@ def seed_master_approvals(db: Session) -> int:
             db.add(approval)
             added_count += 1
         else:
-            # Update fields if needed
             existing.name = data["name"]
             existing.department = data["department"]
             existing.description = data["description"]
             existing.official_portal_url = data["official_portal_url"]
             existing.processing_days = data["processing_days"]
             existing.prerequisites = data["prerequisites"]
-
     db.commit()
     return added_count
+
+
+def seed_regulatory_documents(db: Session) -> int:
+    """
+    Seeds master documents and links them to corresponding approvals.
+    """
+    doc_added = 0
+    for doc_data in MASTER_DOCUMENTS_DATA:
+        existing = (
+            db.query(MasterDocument)
+            .filter(MasterDocument.code == doc_data["code"])
+            .first()
+        )
+        if not existing:
+            doc = MasterDocument(**doc_data)
+            db.add(doc)
+            doc_added += 1
+        else:
+            existing.name = doc_data["name"]
+            existing.description = doc_data["description"]
+            existing.valid_formats = doc_data["valid_formats"]
+            existing.max_size_mb = doc_data["max_size_mb"]
+    db.commit()
+
+    # Map documents to approvals
+    all_masters = {a.code: a for a in db.query(MasterApproval).all()}
+    all_docs = {d.code: d for d in db.query(MasterDocument).all()}
+
+    mapping_added = 0
+    for app_code, doc_codes in APPROVAL_DOC_MAPPINGS.items():
+        master_app = all_masters.get(app_code)
+        if not master_app:
+            continue
+
+        for doc_code in doc_codes:
+            master_doc = all_docs.get(doc_code)
+            if not master_doc:
+                continue
+
+            existing_link = (
+                db.query(ApprovalRequiredDocument)
+                .filter(
+                    ApprovalRequiredDocument.master_approval_id == master_app.id,
+                    ApprovalRequiredDocument.master_document_id == master_doc.id,
+                )
+                .first()
+            )
+            if not existing_link:
+                link = ApprovalRequiredDocument(
+                    master_approval_id=master_app.id,
+                    master_document_id=master_doc.id,
+                    is_mandatory=True,
+                )
+                db.add(link)
+                mapping_added += 1
+
+    db.commit()
+    return doc_added + mapping_added
+
+
+def seed_all(db: Session):
+    seed_master_approvals(db)
+    seed_regulatory_documents(db)

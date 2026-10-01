@@ -24,6 +24,11 @@ class MasterApproval(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     business_approvals = relationship("BusinessApproval", back_populates="approval")
+    required_documents = relationship(
+        "ApprovalRequiredDocument",
+        back_populates="master_approval",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self):
         return f"<MasterApproval(code={self.code}, name={self.name})>"

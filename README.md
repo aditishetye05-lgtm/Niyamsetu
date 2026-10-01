@@ -21,23 +21,24 @@ NiyamSetu is an intelligent compliance and business approval navigation platform
 niyam-setu/
 ├── backend/
 │   ├── app/
-│   │   ├── api/v1/endpoints/  # Business profile & Roadmap endpoints
+│   │   ├── api/v1/endpoints/  # Business profile, Roadmap & Vault endpoints
 │   │   ├── core/              # Config & settings
 │   │   ├── db/                # Engine, session & seed data
-│   │   ├── models/            # SQLAlchemy models (Business, MasterApproval, BusinessApproval)
+│   │   ├── models/            # SQLAlchemy models (Business, MasterApproval, BusinessApproval, MasterDocument, ApprovalRequiredDocument, VaultDocument)
 │   │   ├── schemas/           # Pydantic v2 schemas
-│   │   ├── services/          # Regulatory Discovery Engine
+│   │   ├── services/          # Discovery Engine & Compliance Score Calculator
 │   │   └── main.py            # FastAPI main app with CORS & lifespan seeding
-│   ├── supabase_schema.sql    # Supabase / PostgreSQL table DDL & indexes
+│   ├── supabase_schema.sql    # Complete Supabase PostgreSQL DDL & indexes
 │   ├── test_api.py            # Step 1 API tests
 │   ├── test_roadmap.py        # Step 2 Discovery & Roadmap tests
+│   ├── test_vault.py          # Step 3 Document Vault & Score tests
 │   ├── requirements.txt       # Python dependencies
 │   ├── run.py                 # Backend development runner
 │   └── .env                   # Backend environment configuration
 └── frontend/
     ├── src/
-    │   ├── app/               # Next.js App Router (Step 1 Home & Step 2 /roadmap)
-    │   ├── components/        # Business Registration Card, Header, UI Primitives
+    │   ├── app/               # Next.js App Router (/, /roadmap, /vault)
+    │   ├── components/        # Business Registration, Header, ComplianceScoreWidget, UI Primitives
     │   └── lib/               # Utility functions & API client
     ├── package.json
     └── tailwind.config.ts
@@ -70,10 +71,11 @@ niyam-setu/
      ```env
      DATABASE_URL=postgresql://postgres.[REF]:[PASSWORD]@aws-0-ap-south-1.pooler.supabase.com:5432/postgres
      ```
-   - For **local SQLite dev**: If no PostgreSQL URL is provided, it falls back to `niyamsetu.db`.
+   - For **local SQLite dev**: Falls back to `niyamsetu.db` automatically if no PostgreSQL URL is provided.
 5. Run automated tests:
    ```bash
    python test_roadmap.py
+   python test_vault.py
    ```
 6. Run the server:
    ```bash
@@ -100,7 +102,7 @@ niyam-setu/
 
 ---
 
-## Feature Roadmap
+## Features Implemented
 
 ###  Step 1: Enter Business Details
 - Captures Enterprise Name, Business Type, State, Investment in INR, and Employee Count.
@@ -116,6 +118,21 @@ niyam-setu/
   - Filtering by category (Mandatory, In Progress, Approved).
   - Prerequisite tracking preparing for Step 3 (Dependency Graph).
 
+###  Step 3: Document Checklist, Smart Vault & Compliance Readiness Score
+- **Approval-wise Document Checklist**: Maps exact statutory documents required for each approval (e.g., FSSAI requires FSMS plan, Water Test Report; Fire NOC requires Fire Safety equipment layout; CTE requires Process Flow and ETP plan).
+- **Smart Document Vault with Cross-Approval Reuse**: Common documents (PAN, Aadhaar, Lease Deed, Site Plan) uploaded once are automatically linked and satisfy all clearances requiring them.
+- **Dynamic Compliance Readiness Score Engine (0-100%)**:
+  - Weighted formula:
+    - *Documents Readiness (40%)*
+    - *Approvals Progress (30%)*
+    - *Dependencies Met (20%)*
+    - *Renewals & Validity (10%)*
+  - Radial circular gauge with rating indicators (*Audit Ready*, *On Track*, *Needs Attention*).
+- **Dedicated Vault Interface (`/vault?business_id=[id]`)**:
+  - Clearance filter tabs with live completion fractions.
+  - Interactive upload dropzone supporting real files or verified mocks.
+  - Instant progress bar and score recalculation.
+
 ---
 
 ## API Endpoints Implemented
@@ -127,4 +144,8 @@ niyam-setu/
 | `POST` | `/api/v1/business/{business_id}/discover-approvals` | Evaluate criteria and generate customized approval checklist |
 | `GET` | `/api/v1/business/{business_id}/roadmap` | Retrieve mapped approvals with status, departments, and prerequisites |
 | `PATCH` | `/api/v1/business/{business_id}/approvals/{approval_id}/status` | Update progress status of a specific clearance |
+| `GET` | `/api/v1/business/{business_id}/documents` | Retrieve approval-wise documents & unique vault checklist with reuse metadata |
+| `POST` | `/api/v1/business/{business_id}/documents/upload` | Upload document to vault with automated cross-approval reuse |
+| `DELETE` | `/api/v1/business/{business_id}/documents/{vault_doc_id}` | Remove document from vault |
+| `GET` | `/api/v1/business/{business_id}/compliance-score` | Calculate real-time Compliance Readiness Score (0-100%) & breakdown |
 | `GET` | `/health` | Health check endpoint |

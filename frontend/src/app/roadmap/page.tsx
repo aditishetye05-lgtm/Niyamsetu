@@ -4,12 +4,15 @@ import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { ComplianceScoreWidget } from "@/components/ComplianceScoreWidget";
 import {
   RoadmapResponse,
   BusinessApprovalItem,
+  ComplianceScoreResponse,
   getBusinessRoadmap,
   discoverBusinessRoadmap,
   updateApprovalStatus,
+  getComplianceScore,
 } from "@/lib/api";
 import { formatINR, formatIndianCurrencyWords } from "@/lib/utils";
 import {
@@ -31,6 +34,8 @@ import {
   RefreshCw,
   BadgeAlert,
   HelpCircle,
+  FolderArchive,
+  FileCheck,
 } from "lucide-react";
 
 const STATUS_CONFIG: Record<
@@ -75,6 +80,7 @@ function RoadmapInner() {
 
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [roadmap, setRoadmap] = useState<RoadmapResponse | null>(null);
+  const [scoreData, setScoreData] = useState<ComplianceScoreResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "mandatory" | "in_progress" | "approved">("all");
@@ -92,22 +98,30 @@ function RoadmapInner() {
       return;
     }
 
-    loadRoadmap(id);
+    loadRoadmapAndScore(id);
   }, [searchParams]);
 
-  const loadRoadmap = async (id: string) => {
+  const loadRoadmapAndScore = async (id: string) => {
     try {
       setLoading(true);
       setError(null);
+
       // Try fetching or evaluating roadmap
       let data: RoadmapResponse;
       try {
         data = await getBusinessRoadmap(id);
       } catch {
-        // If not discovered yet, call discover-approvals
         data = await discoverBusinessRoadmap(id);
       }
       setRoadmap(data);
+
+      // Fetch compliance score
+      try {
+        const score = await getComplianceScore(id);
+        setScoreData(score);
+      } catch {
+        // ignore score fetch error if backend warming up
+      }
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -133,6 +147,10 @@ function RoadmapInner() {
           ),
         };
       });
+
+      // Refresh compliance score after status change
+      const updatedScore = await getComplianceScore(businessId);
+      setScoreData(updatedScore);
     } catch (err) {
       alert("Failed to update status. Please try again.");
     } finally {
@@ -155,6 +173,7 @@ function RoadmapInner() {
         <div className="animate-pulse space-y-6">
           <div className="h-8 w-64 bg-slate-200 rounded-lg"></div>
           <div className="h-44 bg-slate-200 rounded-2xl"></div>
+          <div className="h-28 bg-slate-200 rounded-2xl"></div>
           <div className="grid grid-cols-1 gap-4">
             <div className="h-28 bg-slate-200 rounded-xl"></div>
             <div className="h-28 bg-slate-200 rounded-xl"></div>
@@ -194,9 +213,9 @@ function RoadmapInner() {
   const { summary } = roadmap;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8">
+    <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Stepper Progress Bar */}
-      <div className="mb-8">
+      <div>
         <div className="flex items-center justify-between text-xs sm:text-sm font-medium text-slate-500 mb-3 px-1">
           <Link
             href="/"
@@ -213,12 +232,15 @@ function RoadmapInner() {
             </span>
             <span>2. Approval Roadmap</span>
           </span>
-          <span className="flex items-center gap-1.5 text-slate-400 hidden sm:flex">
+          <Link
+            href={`/vault?business_id=${businessId}`}
+            className="flex items-center gap-1.5 text-slate-500 hover:text-slate-800 transition-colors hidden sm:flex"
+          >
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-slate-600 text-xs">
               3
             </span>
-            <span>3. Dependency Graph</span>
-          </span>
+            <span>3. Document Vault &amp; Score</span>
+          </Link>
         </div>
         <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
           <div className="h-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 rounded-full w-2/3 transition-all duration-500"></div>
@@ -226,7 +248,7 @@ function RoadmapInner() {
       </div>
 
       {/* Top Enterprise Summary Banner */}
-      <div className="rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-xl shadow-slate-900/10 p-6 sm:p-8 mb-8 relative overflow-hidden">
+      <div className="rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-xl shadow-slate-900/10 p-6 sm:p-8 relative overflow-hidden">
         <div className="absolute -right-8 -bottom-10 opacity-10 pointer-events-none">
           <ShieldCheck className="w-56 h-56" />
         </div>
@@ -295,8 +317,15 @@ function RoadmapInner() {
         </div>
       </div>
 
-      {/* Main Section Header with Filter Tabs & Action Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      {/* Feature 3: Dynamic Compliance Readiness Score Widget */}
+      <ComplianceScoreWidget
+        scoreData={scoreData}
+        businessId={businessId}
+        onRefresh={() => loadRoadmapAndScore(businessId)}
+      />
+
+      {/* Main Section Header with Filter Tabs & Action Buttons */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
             <span>Your Required Approvals &amp; Clearances</span>
@@ -309,25 +338,33 @@ function RoadmapInner() {
           </p>
         </div>
 
-        {/* Action Button: Feature 3 Dependency Map Preparation */}
-        <div className="flex items-center gap-2.5">
+        {/* Action Buttons: Vault & Dependency Map */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Link
+            href={`/vault?business_id=${businessId}`}
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 via-orange-500 to-amber-600 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-md shadow-orange-500/20 hover:from-amber-700 hover:to-orange-700 transition-all cursor-pointer"
+          >
+            <FolderArchive className="h-4 w-4" />
+            <span>Check Required Documents &amp; Vault →</span>
+          </Link>
+
           <button
             type="button"
             onClick={() =>
               alert(
-                `Feature 3: Interactive Approval Dependency Graph for '${roadmap.enterprise_name}' is currently being linked!`
+                `Feature 4 / Next Step: Interactive Directed Acyclic Dependency Graph for '${roadmap.enterprise_name}' is currently being linked!`
               )
             }
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-md shadow-indigo-600/20 hover:from-indigo-700 hover:to-indigo-800 transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2.5 text-xs sm:text-sm font-semibold border border-slate-300 transition-all cursor-pointer"
           >
             <GitFork className="h-4 w-4" />
-            <span>View Approval Dependency Map →</span>
+            <span>Dependency Map</span>
           </button>
         </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex flex-wrap items-center gap-2 mb-6 pb-2 border-b border-slate-200">
+      <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-slate-200">
         <button
           type="button"
           onClick={() => setFilter("all")}
@@ -482,7 +519,7 @@ function RoadmapInner() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-slate-200">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-slate-200">
         <Link
           href="/"
           className="text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors inline-flex items-center gap-1"
@@ -490,18 +527,13 @@ function RoadmapInner() {
           <span>← Back to Business Details (Step 1)</span>
         </Link>
 
-        <button
-          type="button"
-          onClick={() =>
-            alert(
-              `Feature 3: Next feature will generate the Interactive Directed Acyclic Dependency Graph for all ${summary.total_approvals} approvals!`
-            )
-          }
+        <Link
+          href={`/vault?business_id=${businessId}`}
           className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 via-orange-500 to-amber-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-orange-500/25 hover:from-amber-700 hover:to-orange-700 transition-all cursor-pointer"
         >
-          <span>Proceed to Dependency Graph (Step 3)</span>
+          <span>Proceed to Document Vault &amp; Score (Step 3)</span>
           <ArrowRight className="h-4 w-4" />
-        </button>
+        </Link>
       </div>
     </div>
   );

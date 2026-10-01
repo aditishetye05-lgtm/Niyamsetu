@@ -26,6 +26,11 @@ class Business(Base):
         back_populates="business",
         cascade="all, delete-orphan",
     )
+    vault_documents = relationship(
+        "VaultDocument",
+        back_populates="business",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self):
         return f"<Business(id={self.id}, enterprise_name={self.enterprise_name})>"
