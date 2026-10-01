@@ -454,6 +454,21 @@ function RoadmapInner() {
                           <ExternalLink className="h-3 w-3" />
                         </a>
                       )}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          window.dispatchEvent(
+                            new CustomEvent("niyamsetu-ask-ai", {
+                              detail: { prompt: `Explain the eligibility criteria, mandatory documents, and turnaround time for ${item.name}` },
+                            })
+                          );
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-md border border-indigo-200 transition-colors cursor-pointer"
+                      >
+                        <Sparkles className="h-3 w-3 text-indigo-500" />
+                        <span>Need Help? Ask AI</span>
+                      </button>
                     </div>
                   </div>
                 </div>

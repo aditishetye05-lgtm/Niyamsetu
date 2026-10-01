@@ -10,6 +10,9 @@ export const metadata: Metadata = {
     "Intelligent compliance and business approval navigation platform for Smart India Hackathon. Navigate government clearances, statutory approvals, and licenses effortlessly.",
 };
 
+import { Suspense } from "react";
+import { AIAssistantWidget } from "@/components/AIAssistantWidget";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -19,6 +22,9 @@ export default function RootLayout({
     <html lang="en" className="h-full">
       <body className={`${inter.className} min-h-screen bg-slate-50 text-slate-900 flex flex-col antialiased selection:bg-amber-100 selection:text-amber-900`}>
         {children}
+        <Suspense fallback={null}>
+          <AIAssistantWidget />
+        </Suspense>
       </body>
     </html>
   );

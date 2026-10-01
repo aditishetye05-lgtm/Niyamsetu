@@ -16,7 +16,10 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Automatically create tables if not existing in PostgreSQL / Supabase
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f" Note on table check: {e}")
     # Seed standard Indian regulatory master approvals & document mappings
     db = SessionLocal()
     try:

@@ -164,6 +164,22 @@ niyam-setu/
   - Global top navbar notification bell with unread badge counter and interactive dropdown drawer.
   - Filter by alert category and mark-as-read capability.
 
+### 🤖 Feature 6: AI Guidance Agent (Regulatory Copilot & Compliance Advisor)
+- **Context Aggregator Engine (`app/services/ai_context.py`)**:
+  - Compiles live enterprise context: Industry sector, state jurisdiction, capital investment & MSME bracket, workforce count.
+  - Live compliance readiness score and rating.
+  - Vault document backlog and immediate unblocked clearance priorities from the DAG dependency engine.
+- **Dual Regulatory Advisory System (`app/services/ai_agent.py`)**:
+  - Grounded in statutory Indian frameworks: **NSWS**, **FSSAI FoSCoS**, **SPCB (Air & Water Acts)**, **DISH (Factories Act 1948)**, and **State Fire Services**.
+  - Dual Mode Architecture:
+    - **Active LLM Provider**: Supports OpenAI (GPT-4o-mini) and Google Gemini (Gemini 1.5 Flash) via environment API keys.
+    - **Intelligent Deterministic Fallback Expert System**: Operates seamlessly offline with zero hallucination, providing exact statutory turnaround times, required document checklists, and prerequisite resolution.
+- **Floating AI Copilot Widget (`AIAssistantWidget.tsx`)**:
+  - Persistent floating action pill in the bottom-right corner across all pages (`/`, `/roadmap`, `/vault`, `/dependencies`, `/tracker`).
+  - Slide-over glassmorphic drawer with real-time enterprise context ribbon.
+  - Contextual quick-prompt chips tailored to the current clearance status.
+  - In-app deep link triggers: "Need Help? Ask AI" buttons on clearance cards pre-fill and trigger dedicated guidance.
+
 ---
 
 ## API Endpoints Implemented
@@ -185,5 +201,7 @@ niyam-setu/
 | `GET` | `/api/v1/business/{business_id}/alerts` | Retrieve notifications grouped into Renewals, Pending Actions, and Updates |
 | `PATCH` | `/api/v1/business/{business_id}/alerts/{alert_id}/read` | Mark a statutory alert as read |
 | `GET` | `/api/v1/business/{business_id}/portal-check/{approval_id}` | Pre-flight validation gate before statutory redirect |
+| `POST` | `/api/v1/business/{business_id}/agent/chat` | Chat with AI Guidance Agent grounded in live enterprise compliance context |
+| `GET` | `/api/v1/business/{business_id}/agent/suggestions` | Retrieve 4 contextual question chips tailored to current business status |
 | `GET` | `/health` | Health check endpoint |
 

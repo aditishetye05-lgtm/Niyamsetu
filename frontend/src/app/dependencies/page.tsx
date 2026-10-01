@@ -479,6 +479,23 @@ function DependenciesInner() {
 
               {/* Bottom Drawer Actions */}
               <div className="pt-6 border-t border-slate-200 space-y-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.dispatchEvent(
+                      new CustomEvent("niyamsetu-ask-ai", {
+                        detail: {
+                          prompt: `Why is ${selectedNode.label} in ${selectedNode.execution_state} state, and how do I satisfy its prerequisites?`,
+                        },
+                      })
+                    );
+                  }}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-slate-900 to-indigo-950 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-md hover:from-slate-800 hover:to-indigo-900 transition-colors cursor-pointer"
+                >
+                  <Sparkles className="h-4 w-4 text-amber-400" />
+                  <span>Ask AI Copilot About This Clearance</span>
+                </button>
+
                 <Link
                   href={`/vault?business_id=${businessId}`}
                   className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-md hover:bg-amber-700 transition-colors"

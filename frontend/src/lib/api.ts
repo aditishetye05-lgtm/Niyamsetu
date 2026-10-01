@@ -580,3 +580,69 @@ export async function checkPortalReadiness(
   return response.json();
 }
 
+// ==========================================
+// Feature 6: AI Guidance Agent Copilot
+// ==========================================
+
+export interface AgentChatResponse {
+  reply: string;
+  suggested_actions: string[];
+  timestamp: string;
+  engine: string;
+}
+
+export interface AgentSuggestionsResponse {
+  business_id: string;
+  enterprise_name?: string | null;
+  suggestions: string[];
+}
+
+export async function sendAgentMessage(
+  businessId: string,
+  message: string
+): Promise<AgentChatResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/business/${businessId}/agent/chat`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ message }),
+    }
+  );
+
+  if (!response.ok) {
+    let errorMsg = `Failed to get AI guidance (${response.status})`;
+    try {
+      const err = await response.json();
+      if (err.detail) errorMsg = err.detail;
+    } catch {}
+    throw new Error(errorMsg);
+  }
+
+  return response.json();
+}
+
+export async function getAgentSuggestions(
+  businessId: string
+): Promise<AgentSuggestionsResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/business/${businessId}/agent/suggestions`,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch AI suggestions (${response.status})`);
+  }
+
+  return response.json();
+}
+
+

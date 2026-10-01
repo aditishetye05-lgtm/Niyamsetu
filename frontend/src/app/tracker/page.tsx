@@ -471,6 +471,22 @@ function TrackerPageContent() {
                               )}
                               <span>Official Portal</span>
                             </button>
+
+                            {/* Deep Link Ask AI Trigger */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                window.dispatchEvent(
+                                  new CustomEvent("niyamsetu-ask-ai", {
+                                    detail: { prompt: `What is the verification procedure, inspection norms, and expected timeline for ${app.name}?` },
+                                  })
+                                );
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-xs font-semibold text-indigo-700 transition-colors shadow-sm cursor-pointer"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                              <span>Ask AI</span>
+                            </button>
                           </div>
                         </div>
 
