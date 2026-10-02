@@ -49,6 +49,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await loginUser(data);
       setUser(res.user);
+      if (typeof window !== "undefined") {
+        try {
+          const savedData = localStorage.getItem("niyamsetu_business_profile");
+          if (savedData) {
+            const parsed = JSON.parse(savedData);
+            if (parsed.user_id !== res.user.id) {
+              parsed.user_id = res.user.id;
+              localStorage.setItem("niyamsetu_business_profile", JSON.stringify(parsed));
+            }
+          }
+        } catch {}
+      }
     } finally {
       setIsLoading(false);
     }
@@ -59,6 +71,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await signupUser(data);
       setUser(res.user);
+      if (typeof window !== "undefined") {
+        try {
+          const savedData = localStorage.getItem("niyamsetu_business_profile");
+          if (savedData) {
+            const parsed = JSON.parse(savedData);
+            if (parsed.user_id !== res.user.id) {
+              parsed.user_id = res.user.id;
+              localStorage.setItem("niyamsetu_business_profile", JSON.stringify(parsed));
+            }
+          }
+        } catch {}
+      }
     } finally {
       setIsLoading(false);
     }

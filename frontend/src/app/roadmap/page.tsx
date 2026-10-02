@@ -150,10 +150,15 @@ function RoadmapInner() {
       });
 
       // Refresh compliance score after status change
-      const updatedScore = await getComplianceScore(businessId);
-      setScoreData(updatedScore);
-    } catch (err) {
-      alert("Failed to update status. Please try again.");
+      try {
+        const updatedScore = await getComplianceScore(businessId);
+        setScoreData(updatedScore);
+      } catch (scoreErr) {
+        console.warn("Compliance score update deferred:", scoreErr);
+      }
+    } catch (err: any) {
+      console.error("Status update error:", err);
+      alert(err.message || "Failed to update status. Please try again.");
     } finally {
       setUpdatingId(null);
     }

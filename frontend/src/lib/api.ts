@@ -148,18 +148,27 @@ export const AUTH_TOKEN_KEY = "niyamsetu_auth_token";
 
 export function getAuthToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(AUTH_TOKEN_KEY);
+  return (
+    localStorage.getItem(AUTH_TOKEN_KEY) ||
+    localStorage.getItem("token") ||
+    localStorage.getItem("access_token") ||
+    localStorage.getItem("auth_token")
+  );
 }
 
 export function setAuthToken(token: string): void {
   if (typeof window !== "undefined") {
     localStorage.setItem(AUTH_TOKEN_KEY, token);
+    localStorage.setItem("token", token);
   }
 }
 
 export function removeAuthToken(): void {
   if (typeof window !== "undefined") {
     localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem("token");
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("auth_token");
   }
 }
 
@@ -293,6 +302,7 @@ export async function getBusinessProfile(
     method: "GET",
     headers: {
       Accept: "application/json",
+      ...getAuthHeaders(),
     },
   });
 
@@ -312,6 +322,7 @@ export async function discoverBusinessRoadmap(
       method: "POST",
       headers: {
         Accept: "application/json",
+        ...getAuthHeaders(),
       },
     }
   );
@@ -332,6 +343,7 @@ export async function getBusinessRoadmap(
       method: "GET",
       headers: {
         Accept: "application/json",
+        ...getAuthHeaders(),
       },
     }
   );
@@ -355,6 +367,7 @@ export async function updateApprovalStatus(
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
+        ...getAuthHeaders(),
       },
       body: JSON.stringify({ status }),
     }
@@ -376,6 +389,7 @@ export async function getBusinessDocuments(
       method: "GET",
       headers: {
         Accept: "application/json",
+        ...getAuthHeaders(),
       },
     }
   );
@@ -407,6 +421,9 @@ export async function uploadVaultDocument(
     `${API_BASE_URL}/business/${businessId}/documents/upload`,
     {
       method: "POST",
+      headers: {
+        ...getAuthHeaders(),
+      },
       body: formData,
     }
   );
@@ -435,6 +452,7 @@ export async function deleteVaultDocument(
       method: "DELETE",
       headers: {
         Accept: "application/json",
+        ...getAuthHeaders(),
       },
     }
   );
@@ -455,6 +473,7 @@ export async function getComplianceScore(
       method: "GET",
       headers: {
         Accept: "application/json",
+        ...getAuthHeaders(),
       },
     }
   );
@@ -515,6 +534,7 @@ export async function getDependencyMap(
       method: "GET",
       headers: {
         Accept: "application/json",
+        ...getAuthHeaders(),
       },
     }
   );
@@ -617,6 +637,7 @@ export async function updateApprovalTracking(
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
+        ...getAuthHeaders(),
       },
       body: JSON.stringify(data),
     }
@@ -643,6 +664,7 @@ export async function getTrackingOverview(
       method: "GET",
       headers: {
         Accept: "application/json",
+        ...getAuthHeaders(),
       },
     }
   );
@@ -663,6 +685,7 @@ export async function getBusinessAlerts(
       method: "GET",
       headers: {
         Accept: "application/json",
+        ...getAuthHeaders(),
       },
     }
   );
@@ -684,6 +707,7 @@ export async function markAlertAsRead(
       method: "PATCH",
       headers: {
         Accept: "application/json",
+        ...getAuthHeaders(),
       },
     }
   );
@@ -705,6 +729,7 @@ export async function checkPortalReadiness(
       method: "GET",
       headers: {
         Accept: "application/json",
+        ...getAuthHeaders(),
       },
     }
   );
@@ -744,6 +769,7 @@ export async function sendAgentMessage(
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
+        ...getAuthHeaders(),
       },
       body: JSON.stringify({ message }),
     }
@@ -770,6 +796,7 @@ export async function getAgentSuggestions(
       method: "GET",
       headers: {
         Accept: "application/json",
+        ...getAuthHeaders(),
       },
     }
   );

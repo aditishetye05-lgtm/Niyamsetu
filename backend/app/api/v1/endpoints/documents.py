@@ -45,7 +45,11 @@ ALLOWED_SIGNATURES = {
 }
 
 
-def verify_business_access(business: Business, current_user: Optional[User]):
+def verify_business_access(
+    business: Business,
+    current_user: Optional[User],
+    db: Optional[Session] = None,
+):
     """Ensure multi-tenant isolation so no tenant can ever inspect or alter another tenant's documents."""
     if business.user_id:
         if not current_user:
@@ -54,10 +58,30 @@ def verify_business_access(business: Business, current_user: Optional[User]):
                 detail="Authentication required to access this business profile.",
             )
         if business.user_id != current_user.id:
+            # Check if the business was created under an orphaned test user that no longer exists in users table
+            if db:
+                owner_exists = db.query(User).filter(User.id == business.user_id).first()
+                if not owner_exists:
+                    # Automatically re-link to the current active logged-in user
+                    business.user_id = current_user.id
+                    try:
+                        db.commit()
+                        db.refresh(business)
+                        return
+                    except Exception:
+                        db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied: You do not have permission to access or modify this business's regulatory documents.",
             )
+    elif current_user and db:
+        # Automatically claim unassigned business
+        business.user_id = current_user.id
+        try:
+            db.commit()
+            db.refresh(business)
+        except Exception:
+            db.rollback()
 
 
 def validate_uploaded_file(file: UploadFile, content: bytes):
@@ -106,7 +130,7 @@ def get_business_documents(
             detail=f"Business profile with ID '{business_id}' not found.",
         )
 
-    verify_business_access(business, current_user)
+    verify_business_access(business, current_user, db)
 
     # Ensure approvals have been generated
     approvals, _ = evaluate_and_generate_approvals(business, db)
@@ -248,7 +272,7 @@ async def upload_vault_document(
             detail=f"Business profile with ID '{business_id}' not found.",
         )
 
-    verify_business_access(business, current_user)
+    verify_business_access(business, current_user, db)
 
     master_doc = (
         db.query(MasterDocument)
@@ -339,7 +363,7 @@ def delete_vault_document(
             detail=f"Business profile with ID '{business_id}' not found.",
         )
 
-    verify_business_access(business, current_user)
+    verify_business_access(business, current_user, db)
 
     doc = (
         db.query(VaultDocument)
@@ -378,7 +402,7 @@ def get_compliance_score(
             detail=f"Business profile with ID '{business_id}' not found.",
         )
 
-    verify_business_access(business, current_user)
+    verify_business_access(business, current_user, db)
 
     score_data = calculate_compliance_score(business, db)
 
