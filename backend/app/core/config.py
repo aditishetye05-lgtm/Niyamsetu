@@ -11,6 +11,8 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:5173",
+        "https://niyamsetu-mauve.vercel.app",
+        "https://niyamsetu.vercel.app",
     ]
     DATABASE_URL: str = "sqlite:///./niyamsetu.db"
     JWT_SECRET_KEY: str = "niyamsetu_super_secret_jwt_key_enterprise_compliance_2026"

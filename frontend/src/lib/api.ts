@@ -113,8 +113,12 @@ export interface ComplianceScoreResponse {
   summary_message: string;
 }
 
-const API_BASE_URL =
+const rawApiUrl =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const cleanApiUrl = rawApiUrl.replace(/\/+$/, "");
+export const API_BASE_URL = cleanApiUrl.endsWith("/api/v1")
+  ? cleanApiUrl
+  : `${cleanApiUrl}/api/v1`;
 
 export interface UserSignupInput {
   email: string;

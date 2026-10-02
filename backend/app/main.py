@@ -42,6 +42,8 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+from app.api.v1.endpoints import auth
+
 # Configure CORS
 origins = settings.CORS_ORIGINS
 if isinstance(origins, str):
@@ -50,12 +52,17 @@ if isinstance(origins, str):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Standard API v1 routes
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Root-level aliases for direct frontend client compatibility
+app.include_router(auth.router, prefix="/auth", tags=["Authentication (Root Alias)"])
 
 
 @app.get("/", tags=["Health"])
