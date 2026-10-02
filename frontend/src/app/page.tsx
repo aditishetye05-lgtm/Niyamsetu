@@ -20,9 +20,9 @@ export default function Home() {
         <div className="mx-auto max-w-5xl">
           {/* Hero Section */}
           <div className="text-center mb-10 max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-100/80 text-amber-800 text-xs font-semibold mb-4 border border-amber-200">
-              <span className="flex h-2 w-2 rounded-full bg-amber-600 animate-pulse"></span>
-              Smart India Hackathon 2024 Solution
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-semibold mb-4 border border-emerald-200">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-600 animate-pulse"></span>
+              Govt-Aligned Compliance Engine &bull; Digital India Initiative
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-950">
               Accelerate Your Enterprise Approvals with{" "}
@@ -82,9 +82,9 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white py-6 mt-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <p>© 2026 NiyamSetu &bull; Built for Smart India Hackathon.</p>
+          <p>© 2026 NiyamSetu &bull; National Regulatory Compliance &amp; Approval Engine &bull; Digital India Initiative</p>
           <div className="flex items-center gap-6">
-            <span>Powered by Next.js &bull; FastAPI &bull; PostgreSQL</span>
+            <span>Enterprise Regulatory Gateway</span>
           </div>
         </div>
       </footer>

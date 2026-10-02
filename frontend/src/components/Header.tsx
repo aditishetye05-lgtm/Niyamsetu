@@ -14,11 +14,16 @@ import {
   ExternalLink,
   X,
   ChevronRight,
+  User as UserIcon,
+  LogOut,
+  LogIn,
 } from "lucide-react";
 import { getBusinessAlerts, markAlertAsRead, AlertItem, AlertsSummary } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 function HeaderContent() {
   const searchParams = useSearchParams();
+  const { user, isAuthenticated, logout } = useAuth();
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [alertsSummary, setAlertsSummary] = useState<AlertsSummary | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -101,31 +106,70 @@ function HeaderContent() {
                 <span className="text-xl font-bold tracking-tight text-slate-900 group-hover:text-amber-600 transition-colors">
                   Niyam<span className="text-amber-600">Setu</span>
                 </span>
-                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 border border-amber-200/60 uppercase tracking-wide">
-                  SIH 2024
+                <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-800 border border-emerald-200 uppercase tracking-wide">
+                  Govt-Aligned
                 </span>
               </div>
               <span className="text-xs font-medium text-slate-500 hidden sm:inline-block">
-                Your Business Approval & Compliance Navigator
+                National Regulatory Compliance & Approval Engine
               </span>
             </div>
           </Link>
         </div>
 
-        {/* Right Badges & Notification Center */}
+        {/* Right Badges, Auth & Notification Center */}
         <div className="flex items-center gap-2 sm:gap-4">
           <div className="hidden lg:flex items-center gap-2 text-xs font-medium text-slate-600 bg-slate-100/80 px-3 py-1.5 rounded-full border border-slate-200">
             <ShieldCheck className="h-4 w-4 text-emerald-600" />
-            <span>Govt. Regulatory Engine</span>
+            <span>Digital India Initiative</span>
           </div>
 
-          <div className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/70">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <span>FastAPI Active</span>
-          </div>
+          {/* User Profile / Auth State */}
+          {isAuthenticated && user ? (
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+              <div className="hidden sm:flex flex-col text-right">
+                <span className="text-xs font-semibold text-slate-800 leading-tight">
+                  {user.full_name}
+                </span>
+                <span className="text-[10px] text-slate-500 truncate max-w-[130px]">
+                  {user.email}
+                </span>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-amber-600 text-white flex items-center justify-center text-xs font-bold shadow-sm">
+                {user.full_name
+                  ? user.full_name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .substring(0, 2)
+                      .toUpperCase()
+                  : "U"}
+              </div>
+              <button
+                onClick={logout}
+                title="Sign Out"
+                className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                aria-label="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+              <Link
+                href="/login"
+                className="px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-colors"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/signup"
+                className="px-3 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-sm transition"
+              >
+                Register
+              </Link>
+            </div>
+          )}
 
           {/* Notification Bell Dropdown */}
           <div className="relative" ref={dropdownRef}>

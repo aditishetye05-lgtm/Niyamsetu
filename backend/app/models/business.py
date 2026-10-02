@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Float, Integer, DateTime
+from sqlalchemy import Column, String, Float, Integer, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 
@@ -19,7 +19,10 @@ class Business(Base):
     state = Column(String(100), nullable=False, index=True)
     investment_inr = Column(Float, nullable=False)
     employee_count = Column(Integer, nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User", back_populates="businesses")
 
     approvals = relationship(
         "BusinessApproval",

@@ -936,6 +936,14 @@ function TrackerPageContent() {
           </div>
         )}
       </main>
+      <footer className="border-t border-slate-200 bg-white py-6 mt-12">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+          <p>© 2026 NiyamSetu &bull; National Regulatory Compliance &amp; Approval Engine &bull; Digital India Initiative</p>
+          <div className="flex items-center gap-6">
+            <span>Enterprise Regulatory Gateway</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

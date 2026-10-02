@@ -1,9 +1,11 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.business import Business
+from app.models.user import User
 from app.schemas.business import BusinessCreate, BusinessResponse
+from app.api.deps import get_optional_current_user
 
 router = APIRouter()
 
@@ -18,6 +20,7 @@ router = APIRouter()
 def create_business_profile(
     business_in: BusinessCreate,
     db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user),
 ):
     try:
         new_business = Business(
@@ -26,6 +29,7 @@ def create_business_profile(
             state=business_in.state.strip(),
             investment_inr=business_in.investment_inr,
             employee_count=business_in.employee_count,
+            user_id=current_user.id if current_user else None,
         )
         db.add(new_business)
         db.commit()
@@ -48,12 +52,18 @@ def create_business_profile(
 def get_business_by_id(
     business_id: str,
     db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user),
 ):
     business = db.query(Business).filter(Business.id == business_id).first()
     if not business:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Business profile with ID '{business_id}' not found.",
+        )
+    if business.user_id and current_user and business.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: You do not have permission to view this enterprise profile.",
         )
     return business
 
@@ -68,6 +78,10 @@ def list_businesses(
     skip: int = 0,
     limit: int = 50,
     db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user),
 ):
-    businesses = db.query(Business).offset(skip).limit(limit).all()
+    query = db.query(Business)
+    if current_user:
+        query = query.filter(Business.user_id == current_user.id)
+    businesses = query.offset(skip).limit(limit).all()
     return businesses

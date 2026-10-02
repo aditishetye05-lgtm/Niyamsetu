@@ -1,12 +1,15 @@
 from datetime import datetime
-from typing import List, Dict
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List, Dict, Optional
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.business import Business
 from app.models.approval import BusinessApproval, MasterApproval
 from app.models.document import VaultDocument, ApprovalRequiredDocument
 from app.models.alert import AlertAndReminder
+from app.models.user import User
+from app.api.deps import get_optional_current_user
+from app.services.email_service import dispatch_status_change_email, dispatch_renewal_warning_email
 from app.schemas.tracker import (
     TrackApprovalRequest,
     TrackedApprovalItem,
@@ -39,7 +42,9 @@ def update_approval_tracking(
     business_id: str,
     approval_id: str,
     payload: TrackApprovalRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user),
 ):
     business = db.query(Business).filter(Business.id == business_id).first()
     if not business:
@@ -89,6 +94,26 @@ def update_approval_tracking(
     db.refresh(ba)
 
     master = ba.approval
+
+    # Email Notification Trigger: Application Status Transition
+    target_email = None
+    if business.user and business.user.email:
+        target_email = business.user.email
+    elif current_user and current_user.email:
+        target_email = current_user.email
+    else:
+        target_email = "compliance-lead@enterprise.niyamsetu.gov.in"
+
+    if master:
+        dispatch_status_change_email(
+            to_email=target_email,
+            enterprise_name=business.enterprise_name,
+            clearance_name=master.name,
+            new_stage=payload.tracking_stage,
+            application_id=ba.application_id or "ACK-PENDING",
+            background_tasks=background_tasks,
+        )
+
     return TrackedApprovalItem(
         id=ba.id,
         approval_id=ba.approval_id,
@@ -104,6 +129,50 @@ def update_approval_tracking(
         official_portal_url=master.official_portal_url if master else None,
         processing_days=master.processing_days if master else 30,
     )
+
+
+@router.post(
+    "/{business_id}/alerts/{alert_id}/dispatch-email",
+    summary="Dispatch Alert or Renewal Warning Email",
+    description="Dispatches a statutory email notification (HTML transactional template) to the business owner.",
+)
+def dispatch_alert_email(
+    business_id: str,
+    alert_id: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user),
+):
+    business = db.query(Business).filter(Business.id == business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+
+    alert = db.query(AlertAndReminder).filter(AlertAndReminder.id == alert_id, AlertAndReminder.business_id == business_id).first()
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+
+    target_email = None
+    if business.user and business.user.email:
+        target_email = business.user.email
+    elif current_user and current_user.email:
+        target_email = current_user.email
+    else:
+        target_email = "compliance-officer@enterprise.niyamsetu.gov.in"
+
+    dispatch_renewal_warning_email(
+        to_email=target_email,
+        enterprise_name=business.enterprise_name,
+        clearance_name=alert.title,
+        days_remaining=30,
+        due_date=alert.due_date.strftime("%d %b %Y") if alert.due_date else "Immediate",
+        background_tasks=background_tasks,
+    )
+    return {
+        "success": True,
+        "message": f"Alert email notification scheduled for {target_email}",
+        "recipient": target_email,
+        "alert_title": alert.title,
+    }
 
 
 @router.get(

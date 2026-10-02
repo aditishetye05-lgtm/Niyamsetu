@@ -15,6 +15,8 @@ from app.db.session import get_db
 from app.models.business import Business
 from app.models.approval import BusinessApproval, MasterApproval
 from app.models.document import MasterDocument, ApprovalRequiredDocument, VaultDocument
+from app.models.user import User
+from app.api.deps import get_optional_current_user
 from app.schemas.document import (
     BusinessDocumentsResponse,
     ApprovalDocumentGroup,
@@ -32,6 +34,59 @@ router = APIRouter()
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB Limit
+
+ALLOWED_SIGNATURES = {
+    "application/pdf": [b"%PDF"],
+    "image/jpeg": [b"\xff\xd8\xff"],
+    "image/png": [b"\x89PNG\r\n\x1a\n"],
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [b"PK\x03\x04"],
+    "application/msword": [b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"],
+}
+
+
+def verify_business_access(business: Business, current_user: Optional[User]):
+    """Ensure multi-tenant isolation so no tenant can ever inspect or alter another tenant's documents."""
+    if business.user_id:
+        if not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required to access this business profile.",
+            )
+        if business.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You do not have permission to access or modify this business's regulatory documents.",
+            )
+
+
+def validate_uploaded_file(file: UploadFile, content: bytes):
+    """Strict validation for file size, MIME type, and binary magic bytes to prevent execution of malicious payloads."""
+    if len(content) > MAX_FILE_SIZE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File exceeds maximum allowed size of 5MB (Uploaded size: {len(content) / (1024*1024):.2f}MB).",
+        )
+
+    mime = (file.content_type or "").lower()
+    
+    # Check magic bytes
+    is_valid_magic = False
+    for expected_mime, signatures in ALLOWED_SIGNATURES.items():
+        for sig in signatures:
+            if content.startswith(sig):
+                is_valid_magic = True
+                break
+        if is_valid_magic:
+            break
+
+    # If MIME is given and allowed, check if magic matches or vice versa
+    if not is_valid_magic:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Security violation: File header magic bytes do not match permitted document types (PDF, PNG, JPEG, DOCX).",
+        )
+
 
 @router.get(
     "/{business_id}/documents",
@@ -42,6 +97,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 def get_business_documents(
     business_id: str,
     db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user),
 ):
     business = db.query(Business).filter(Business.id == business_id).first()
     if not business:
@@ -49,6 +105,8 @@ def get_business_documents(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Business profile with ID '{business_id}' not found.",
         )
+
+    verify_business_access(business, current_user)
 
     # Ensure approvals have been generated
     approvals, _ = evaluate_and_generate_approvals(business, db)
@@ -181,6 +239,7 @@ async def upload_vault_document(
     file: Optional[UploadFile] = File(None),
     file_name: Optional[str] = Form(None),
     db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user),
 ):
     business = db.query(Business).filter(Business.id == business_id).first()
     if not business:
@@ -188,6 +247,8 @@ async def upload_vault_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Business profile with ID '{business_id}' not found.",
         )
+
+    verify_business_access(business, current_user)
 
     master_doc = (
         db.query(MasterDocument)
@@ -200,19 +261,24 @@ async def upload_vault_document(
             detail=f"Master document with ID '{master_document_id}' not found.",
         )
 
-    # Determine file attributes
+    # Determine file attributes & validate security
     if file and file.filename:
         actual_name = file.filename
         content = await file.read()
+        
+        # Enforce 5MB limit and binary signature magic byte validation
+        validate_uploaded_file(file, content)
+
         size_kb = max(1, len(content) // 1024)
         mime = file.content_type or "application/octet-stream"
 
-        # Save to local uploads folder
-        safe_filename = f"{business_id}_{master_doc.code}_{uuid.uuid4().hex[:6]}_{actual_name}"
-        dest_path = os.path.join(UPLOAD_DIR, safe_filename)
+        # Security: Obfuscate disk filename with UUID - Never write raw client names to disk
+        ext = os.path.splitext(actual_name)[1].lower() or ".pdf"
+        obfuscated_filename = f"sec_{uuid.uuid4().hex}{ext}"
+        dest_path = os.path.join(UPLOAD_DIR, obfuscated_filename)
         with open(dest_path, "wb") as f:
             f.write(content)
-        file_url = f"/uploads/{safe_filename}"
+        file_url = f"/uploads/{obfuscated_filename}"
     else:
         # Virtual / metadata document upload
         actual_name = file_name or f"{master_doc.code}_document.pdf"
@@ -258,13 +324,23 @@ async def upload_vault_document(
 @router.delete(
     "/{business_id}/documents/{vault_document_id}",
     summary="Delete Vault Document",
-    description="Remove an uploaded document from the business vault.",
+    description="Remove an uploaded document from the business vault with tenant access verification.",
 )
 def delete_vault_document(
     business_id: str,
     vault_document_id: str,
     db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user),
 ):
+    business = db.query(Business).filter(Business.id == business_id).first()
+    if not business:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Business profile with ID '{business_id}' not found.",
+        )
+
+    verify_business_access(business, current_user)
+
     doc = (
         db.query(VaultDocument)
         .filter(
@@ -293,6 +369,7 @@ def delete_vault_document(
 def get_compliance_score(
     business_id: str,
     db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user),
 ):
     business = db.query(Business).filter(Business.id == business_id).first()
     if not business:
@@ -300,6 +377,8 @@ def get_compliance_score(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Business profile with ID '{business_id}' not found.",
         )
+
+    verify_business_access(business, current_user)
 
     score_data = calculate_compliance_score(business, db)
 

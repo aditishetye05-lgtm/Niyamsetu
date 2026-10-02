@@ -116,6 +116,137 @@ export interface ComplianceScoreResponse {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
+export interface UserSignupInput {
+  email: string;
+  password: string;
+  full_name: string;
+}
+
+export interface UserLoginInput {
+  email: string;
+  password: string;
+}
+
+export interface UserResponse {
+  id: string;
+  email: string;
+  full_name: string;
+  created_at: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: UserResponse;
+}
+
+export const AUTH_TOKEN_KEY = "niyamsetu_auth_token";
+
+export function getAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+export function setAuthToken(token: string): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+  }
+}
+
+export function removeAuthToken(): void {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+  }
+}
+
+export function getAuthHeaders(): Record<string, string> {
+  const token = getAuthToken();
+  if (token) {
+    return { Authorization: `Bearer ${token}` };
+  }
+  return {};
+}
+
+export async function signupUser(data: UserSignupInput): Promise<AuthResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    let errorMsg = `Registration failed (${response.status})`;
+    try {
+      const err = await response.json();
+      if (err.detail) {
+        errorMsg = Array.isArray(err.detail)
+          ? err.detail.map((e: any) => e.msg || JSON.stringify(e)).join(", ")
+          : String(err.detail);
+      }
+    } catch {}
+    throw new Error(errorMsg);
+  }
+
+  const result: AuthResponse = await response.json();
+  setAuthToken(result.access_token);
+  return result;
+}
+
+export async function loginUser(data: UserLoginInput): Promise<AuthResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    let errorMsg = `Login failed (${response.status})`;
+    try {
+      const err = await response.json();
+      if (err.detail) {
+        errorMsg = Array.isArray(err.detail)
+          ? err.detail.map((e: any) => e.msg || JSON.stringify(e)).join(", ")
+          : String(err.detail);
+      }
+    } catch {}
+    throw new Error(errorMsg);
+  }
+
+  const result: AuthResponse = await response.json();
+  setAuthToken(result.access_token);
+  return result;
+}
+
+export async function getCurrentUser(): Promise<UserResponse | null> {
+  const token = getAuthToken();
+  if (!token) return null;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        ...getAuthHeaders(),
+      },
+    });
+
+    if (!response.ok) {
+      removeAuthToken();
+      return null;
+    }
+
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function createBusinessProfile(
   data: BusinessProfileInput
 ): Promise<BusinessProfileResponse> {
@@ -124,6 +255,7 @@ export async function createBusinessProfile(
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
+      ...getAuthHeaders(),
     },
     body: JSON.stringify(data),
   });

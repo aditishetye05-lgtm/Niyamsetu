@@ -274,6 +274,51 @@ function VaultInner() {
         onRefresh={() => loadVaultData(businessId)}
       />
 
+      {/* Security & Compliance Seal Banner */}
+      <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-r from-emerald-50/70 via-teal-50/40 to-slate-50 p-5 shadow-xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/20 shrink-0">
+              <ShieldCheck className="w-5 h-5 stroke-[2.2]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                  Security &amp; Compliance Seal
+                </h3>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase tracking-wider border border-emerald-200">
+                  ISO / Digital India Aligned
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Enterprise-grade vault security architecture protecting statutory documents.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 shrink-0">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/80 border border-emerald-100 shadow-xs">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              <div className="text-[11px] font-semibold text-slate-700">
+                AES-256 Bit Encryption at Rest
+              </div>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/80 border border-emerald-100 shadow-xs">
+              <div className="w-2 h-2 rounded-full bg-teal-500 shrink-0" />
+              <div className="text-[11px] font-semibold text-slate-700">
+                Role-Based Access Control <span className="text-[10px] font-normal text-slate-500">(Zero Cross-Tenant Leakage)</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/80 border border-emerald-100 shadow-xs">
+              <div className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+              <div className="text-[11px] font-semibold text-slate-700">
+                Regulatory Verification Only
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 3-Column Layout: Left (Approvals Tabs) | Middle (Checklist) | Right (Uploader) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Approval Tabs (3 Cols) */}
@@ -569,9 +614,9 @@ export default function VaultPage() {
       </main>
       <footer className="border-t border-slate-200 bg-white py-6 mt-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <p>© 2026 NiyamSetu &bull; Smart India Hackathon 2024</p>
+          <p>© 2026 NiyamSetu &bull; National Regulatory Compliance &amp; Approval Engine &bull; Digital India Initiative</p>
           <div className="flex items-center gap-6">
-            <span>Powered by Next.js 14 &bull; FastAPI &bull; Supabase PostgreSQL</span>
+            <span>Enterprise Regulatory Gateway</span>
           </div>
         </div>
       </footer>

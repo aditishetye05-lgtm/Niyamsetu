@@ -13,6 +13,16 @@ class Settings(BaseSettings):
         "http://localhost:5173",
     ]
     DATABASE_URL: str = "sqlite:///./niyamsetu.db"
+    JWT_SECRET_KEY: str = "niyamsetu_super_secret_jwt_key_enterprise_compliance_2026"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+    
+    # SMTP / Email Settings
+    SMTP_SERVER: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    FROM_EMAIL: str = "notifications@niyamsetu.gov.in"
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod

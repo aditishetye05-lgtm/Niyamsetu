@@ -34,8 +34,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="Backend API for NiyamSetu - Business Approval & Compliance Navigator (Smart India Hackathon)",
-    version="1.2.0",
+    description="Backend API for NiyamSetu — National Regulatory Compliance & Approval Engine",
+    version="2.0.0",
     lifespan=lifespan,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     docs_url="/docs",

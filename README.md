@@ -1,9 +1,9 @@
 # NiyamSetu (नियमसेतु)
-### Business Approval & Compliance Navigator (Smart India Hackathon)
+### National Regulatory Compliance & Approval Engine (Digital India Initiative)
 
 > **"Your Bridge from Enterprise Vision to Regulatory Compliance"**
 
-NiyamSetu is an intelligent compliance and business approval navigation platform designed to guide Indian entrepreneurs, MSMEs, and enterprises through statutory approvals, licenses, incentives, and clearances across Central and State jurisdictions.
+NiyamSetu is an enterprise-grade national compliance and statutory clearance platform designed to guide Indian entrepreneurs, MSMEs, and enterprises through statutory approvals, licenses, incentives, and clearances across Central and State jurisdictions.
 
 ---
 
