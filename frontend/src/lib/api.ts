@@ -175,7 +175,10 @@ export function removeAuthToken(): void {
 export function getAuthHeaders(): Record<string, string> {
   const token = getAuthToken();
   if (token) {
-    return { Authorization: `Bearer ${token}` };
+    const formattedToken = token.startsWith("Bearer ")
+      ? token
+      : `Bearer ${token}`;
+    return { Authorization: formattedToken };
   }
   return {};
 }
@@ -472,6 +475,7 @@ export async function getComplianceScore(
     {
       method: "GET",
       headers: {
+        "Content-Type": "application/json",
         Accept: "application/json",
         ...getAuthHeaders(),
       },
