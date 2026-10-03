@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from typing import List, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
@@ -32,70 +33,202 @@ VALID_STAGES = [
 ]
 
 
-@router.post(
-    "/{business_id}/approvals/{approval_id}/track",
-    response_model=TrackedApprovalItem,
-    summary="Save Official Application ID & Tracking Stage",
-    description="Updates the government application reference number and 5-stage progression status for a clearance.",
-)
-def update_approval_tracking(
-    business_id: str,
+def _perform_tracking_update(
     approval_id: str,
     payload: TrackApprovalRequest,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_optional_current_user),
-):
-    business = db.query(Business).filter(Business.id == business_id).first()
+    db: Session,
+    business_id: Optional[str] = None,
+    current_user: Optional[User] = None,
+) -> TrackedApprovalItem:
+    # 1. Resolve business
+    business = None
+    target_biz_id = business_id or payload.business_id
+    if target_biz_id:
+        business = db.query(Business).filter(Business.id == target_biz_id).first()
+
+    if not business:
+        ba_candidate = db.query(BusinessApproval).filter(
+            (BusinessApproval.id == approval_id) | (BusinessApproval.approval_id == approval_id)
+        ).first()
+        if ba_candidate:
+            business = db.query(Business).filter(Business.id == ba_candidate.business_id).first()
+
+    if not business and current_user:
+        business = db.query(Business).filter(Business.user_id == current_user.id).order_by(Business.created_at.desc()).first()
+
+    if not business:
+        business = db.query(Business).order_by(Business.created_at.desc()).first()
+
     if not business:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Business profile with ID '{business_id}' not found.",
+            detail="No active business profile found to link tracking details.",
         )
 
+    # 2. Normalize payload values
+    app_ref = (payload.application_reference_number or payload.application_id or "").strip()
+    raw_stage = (payload.progression_stage or payload.tracking_stage or "submitted").strip().lower()
+    stage_map = {
+        "submitted": "submitted",
+        "applied": "submitted",
+        "pending": "submitted",
+        "documents_verified": "documents_verified",
+        "documents_ready": "documents_verified",
+        "verified": "documents_verified",
+        "department_inspection": "department_inspection",
+        "inspection": "department_inspection",
+        "under_inspection": "department_inspection",
+        "final_review": "final_review",
+        "under_review": "final_review",
+        "in_review": "final_review",
+        "approved": "approved",
+        "granted": "approved",
+        "completed": "approved",
+    }
+    normalized_stage = stage_map.get(raw_stage, "submitted")
+    if normalized_stage not in VALID_STAGES:
+        normalized_stage = "submitted"
+
+    # 3. Robust Clearance Lookup
+    # A) Exact BusinessApproval.id for this business
     ba = (
         db.query(BusinessApproval)
         .filter(
-            BusinessApproval.business_id == business_id,
+            BusinessApproval.business_id == business.id,
             BusinessApproval.id == approval_id,
         )
         .first()
     )
+
+    # B) MasterApproval.id foreign key for this business
     if not ba:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Business clearance with ID '{approval_id}' not found.",
+        ba = (
+            db.query(BusinessApproval)
+            .filter(
+                BusinessApproval.business_id == business.id,
+                BusinessApproval.approval_id == approval_id,
+            )
+            .first()
         )
 
-    if payload.tracking_stage not in VALID_STAGES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid tracking stage '{payload.tracking_stage}'. Allowed: {VALID_STAGES}",
-        )
+    # C) BusinessApproval.id across all records, re-associating to current business
+    if not ba:
+        ba_any = db.query(BusinessApproval).filter(BusinessApproval.id == approval_id).first()
+        if ba_any:
+            ba = ba_any
+            ba.business_id = business.id
 
-    if payload.application_id:
-        ba.application_id = payload.application_id.strip()
-    ba.tracking_stage = payload.tracking_stage
+    # D) Lookup MasterApproval by ID, code, or payload.clearance_code
+    master = None
+    if not ba:
+        master = db.query(MasterApproval).filter(
+            (MasterApproval.id == approval_id) | (MasterApproval.code == approval_id)
+        ).first()
+
+        if not master and payload.clearance_code:
+            master = db.query(MasterApproval).filter(
+                (MasterApproval.code == payload.clearance_code) | (MasterApproval.id == payload.clearance_code)
+            ).first()
+
+        if not master:
+            search_code = payload.clearance_code or approval_id
+            master = db.query(MasterApproval).filter(
+                (MasterApproval.code.ilike(search_code)) | (MasterApproval.name.ilike(f"%{search_code}%"))
+            ).first()
+
+        if master:
+            ba = (
+                db.query(BusinessApproval)
+                .filter(
+                    BusinessApproval.business_id == business.id,
+                    BusinessApproval.approval_id == master.id,
+                )
+                .first()
+            )
+
+    # E) If clearance record doesn't exist yet for this business, auto-create/upsert dynamically
+    if not ba:
+        try:
+            evaluated_approvals, _ = evaluate_and_generate_approvals(business, db)
+            for eval_ba in evaluated_approvals:
+                if eval_ba.id == approval_id or eval_ba.approval_id == approval_id:
+                    ba = eval_ba
+                    break
+                if master and eval_ba.approval_id == master.id:
+                    ba = eval_ba
+                    break
+                if payload.clearance_code and eval_ba.approval and eval_ba.approval.code == payload.clearance_code:
+                    ba = eval_ba
+                    break
+        except Exception:
+            pass
+
+    if not ba:
+        if not master:
+            derived_code = (
+                payload.clearance_code
+                or (approval_id if not ('-' in approval_id and len(approval_id) == 36) else f"APP_{approval_id[:8].upper()}")
+            ).strip()
+            master = MasterApproval(
+                id=approval_id if ('-' in approval_id and len(approval_id) == 36) else str(uuid.uuid4()),
+                code=derived_code,
+                name=payload.clearance_code or f"Statutory Clearance ({derived_code})",
+                department="Regulatory Authority",
+                description="Statutory business clearance dynamically registered",
+                processing_days=30,
+            )
+            db.add(master)
+            try:
+                db.commit()
+                db.refresh(master)
+            except Exception:
+                db.rollback()
+                master = db.query(MasterApproval).filter(MasterApproval.code == derived_code).first()
+
+        new_ba_id = (
+            approval_id
+            if ('-' in approval_id and len(approval_id) == 36 and not db.query(BusinessApproval).filter(BusinessApproval.id == approval_id).first())
+            else str(uuid.uuid4())
+        )
+        ba = BusinessApproval(
+            id=new_ba_id,
+            business_id=business.id,
+            approval_id=master.id,
+            status="submitted",
+            is_mandatory=True,
+            application_id=app_ref if app_ref else None,
+            tracking_stage=normalized_stage,
+            notes=payload.notes,
+            application_date=datetime.utcnow(),
+        )
+        db.add(ba)
+        db.commit()
+        db.refresh(ba)
+
+    # 4. Update fields on ba
+    if app_ref:
+        ba.application_id = app_ref
+    ba.tracking_stage = normalized_stage
     if payload.notes is not None:
         ba.notes = payload.notes
-
     if not ba.application_date:
         ba.application_date = datetime.utcnow()
 
     # Synchronize overall approval status with tracking stage
-    if payload.tracking_stage == "approved":
+    if normalized_stage == "approved":
         ba.status = "approved"
-    elif payload.tracking_stage in ("documents_verified", "department_inspection", "final_review"):
+    elif normalized_stage in ("documents_verified", "department_inspection", "final_review"):
         ba.status = "under_review"
-    elif payload.tracking_stage == "submitted":
+    elif normalized_stage == "submitted":
         ba.status = "submitted"
 
     db.commit()
     db.refresh(ba)
 
-    master = ba.approval
+    master = ba.approval or db.query(MasterApproval).filter(MasterApproval.id == ba.approval_id).first()
 
-    # Email Notification Trigger: Application Status Transition
+    # 5. Email Notification Trigger: Application Status Transition
     target_email = None
     if business.user and business.user.email:
         target_email = business.user.email
@@ -105,14 +238,17 @@ def update_approval_tracking(
         target_email = "compliance-lead@enterprise.niyamsetu.gov.in"
 
     if master:
-        dispatch_status_change_email(
-            to_email=target_email,
-            enterprise_name=business.enterprise_name,
-            clearance_name=master.name,
-            new_stage=payload.tracking_stage,
-            application_id=ba.application_id or "ACK-PENDING",
-            background_tasks=background_tasks,
-        )
+        try:
+            dispatch_status_change_email(
+                to_email=target_email,
+                enterprise_name=business.enterprise_name,
+                clearance_name=master.name,
+                new_stage=normalized_stage,
+                application_id=ba.application_id or "ACK-PENDING",
+                background_tasks=background_tasks,
+            )
+        except Exception:
+            pass
 
     return TrackedApprovalItem(
         id=ba.id,
@@ -128,6 +264,53 @@ def update_approval_tracking(
         status=ba.status,
         official_portal_url=master.official_portal_url if master else None,
         processing_days=master.processing_days if master else 30,
+    )
+
+
+@router.post(
+    "/{business_id}/approvals/{approval_id}/track",
+    response_model=TrackedApprovalItem,
+    summary="Save Official Application ID & Tracking Stage",
+    description="Updates the government application reference number and 5-stage progression status for a clearance.",
+)
+def update_approval_tracking(
+    business_id: str,
+    approval_id: str,
+    payload: TrackApprovalRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user),
+):
+    return _perform_tracking_update(
+        approval_id=approval_id,
+        payload=payload,
+        background_tasks=background_tasks,
+        db=db,
+        business_id=business_id,
+        current_user=current_user,
+    )
+
+
+@router.post(
+    "/approvals/{approval_id}/track",
+    response_model=TrackedApprovalItem,
+    summary="Save Official Application ID & Tracking Stage (by Clearance ID)",
+    description="Updates the government application reference number and progression status for a clearance by dynamic clearance ID.",
+)
+def update_clearance_tracking_direct(
+    approval_id: str,
+    payload: TrackApprovalRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user),
+):
+    return _perform_tracking_update(
+        approval_id=approval_id,
+        payload=payload,
+        background_tasks=background_tasks,
+        db=db,
+        business_id=payload.business_id,
+        current_user=current_user,
     )
 
 

@@ -562,11 +562,14 @@ export type TrackingStage =
   | "approved";
 
 export interface TrackApprovalRequest {
-  application_id: string;
-  tracking_stage?: TrackingStage;
+  application_id?: string;
+  application_reference_number?: string;
+  tracking_stage?: TrackingStage | string;
+  progression_stage?: TrackingStage | string;
   application_date?: string | null;
   approval_expiry_date?: string | null;
   notes?: string | null;
+  clearance_code?: string;
 }
 
 export interface TrackedApprovalItem {
@@ -630,22 +633,72 @@ export interface PortalCheckResponse {
 }
 
 export async function updateApprovalTracking(
+  clearanceId: string,
+  trackingData: {
+    application_reference_number?: string;
+    progression_stage?: string;
+    notes?: string;
+    application_id?: string;
+    tracking_stage?: TrackingStage | string;
+    clearance_code?: string;
+  }
+): Promise<TrackedApprovalItem>;
+export async function updateApprovalTracking(
   businessId: string,
-  approvalId: string,
-  data: TrackApprovalRequest
+  clearanceId: string,
+  trackingData: {
+    application_reference_number?: string;
+    progression_stage?: string;
+    notes?: string;
+    application_id?: string;
+    tracking_stage?: TrackingStage | string;
+    clearance_code?: string;
+  }
+): Promise<TrackedApprovalItem>;
+export async function updateApprovalTracking(
+  arg1: string,
+  arg2: any,
+  arg3?: any
 ): Promise<TrackedApprovalItem> {
-  const response = await fetch(
-    `${API_BASE_URL}/business/${businessId}/approvals/${approvalId}/track`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        ...getAuthHeaders(),
-      },
-      body: JSON.stringify(data),
+  let businessId: string | null = null;
+  let clearanceId: string;
+  let trackingData: any;
+
+  if (typeof arg2 === "string") {
+    businessId = arg1;
+    clearanceId = arg2;
+    trackingData = arg3 || {};
+  } else {
+    clearanceId = arg1;
+    trackingData = arg2 || {};
+    if (typeof window !== "undefined") {
+      businessId = localStorage.getItem("niyamsetu_business_id");
     }
-  );
+  }
+
+  const payload = {
+    application_id: (trackingData.application_id || trackingData.application_reference_number || "").trim(),
+    application_reference_number: (trackingData.application_reference_number || trackingData.application_id || "").trim(),
+    tracking_stage: trackingData.tracking_stage || trackingData.progression_stage || "submitted",
+    progression_stage: trackingData.progression_stage || trackingData.tracking_stage || "submitted",
+    notes: trackingData.notes,
+    clearance_code: trackingData.clearance_code,
+    business_id: businessId || undefined,
+  };
+
+  const endpointUrl = businessId
+    ? `${API_BASE_URL}/business/${businessId}/approvals/${clearanceId}/track`
+    : `${API_BASE_URL}/business/approvals/${clearanceId}/track`;
+
+  const response = await fetch(endpointUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
 
   if (!response.ok) {
     let errorMsg = `Failed to update tracking (${response.status})`;

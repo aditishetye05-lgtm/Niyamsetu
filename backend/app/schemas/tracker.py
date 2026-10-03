@@ -9,12 +9,22 @@ class TrackApprovalRequest(BaseModel):
         description="Official government application / reference number",
         examples=["MH2026-FSSAI-8921"],
     )
-    tracking_stage: str = Field(
-        "submitted",
+    application_reference_number: Optional[str] = Field(
+        None,
+        description="Alternative key for official government application reference number",
+    )
+    tracking_stage: Optional[str] = Field(
+        None,
         description="Stage: 'submitted', 'documents_verified', 'department_inspection', 'final_review', 'approved'",
         examples=["documents_verified"],
     )
+    progression_stage: Optional[str] = Field(
+        None,
+        description="Alternative key for progression stage",
+    )
     notes: Optional[str] = None
+    clearance_code: Optional[str] = None
+    business_id: Optional[str] = None
 
 
 class TrackedApprovalItem(BaseModel):

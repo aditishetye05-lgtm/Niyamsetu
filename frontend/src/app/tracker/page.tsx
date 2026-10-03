@@ -155,15 +155,25 @@ function TrackerPageContent() {
     if (!businessId || !editingApproval) return;
     try {
       setIsSavingTracking(true);
-      const updated = await updateApprovalTracking(businessId, editingApproval.approval_id, {
+      const clearanceId = editingApproval.id || editingApproval.approval_id;
+      const updated = await updateApprovalTracking(clearanceId, {
+        application_reference_number: inputAppId.trim(),
+        progression_stage: inputStage,
         application_id: inputAppId.trim(),
         tracking_stage: inputStage,
         notes: inputNotes.trim() || undefined,
+        clearance_code: editingApproval.code,
       });
 
       // Update in state
       setTrackedApprovals((prev) =>
-        prev.map((item) => (item.id === updated.id ? updated : item))
+        prev.map((item) =>
+          item.id === updated.id ||
+          item.approval_id === updated.approval_id ||
+          item.code === updated.code
+            ? updated
+            : item
+        )
       );
 
       // Re-fetch overview in background to update stage counts
